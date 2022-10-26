@@ -2,6 +2,9 @@
 /data/*
 !/data/preprocessed
 ?
+# wandb
+/wandb
+?
 # macOS + Windows
 .DS_Store
 ._*
