@@ -1,5 +1,6 @@
 ### Dataset
-/data/images
+/data
+!/data/preprocessed
 ?
 # macOS + Windows
 .DS_Store
