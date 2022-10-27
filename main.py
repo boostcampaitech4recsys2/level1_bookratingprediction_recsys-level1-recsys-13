@@ -14,9 +14,21 @@ from src import NeuralCollaborativeFiltering, WideAndDeepModel, DeepCrossNetwork
 from src import CNN_FM
 from src import DeepCoNN
 
+import wandb
+
 
 def main(args):
     seed_everything(args.SEED)
+
+    ######################## SET WANDB
+    if args.WANDB:
+        wandb.init(project="test-project", entity="ai-tech-4-recsys13")
+        wandb.config = {
+            "learning_rate": args.LR ,
+            "epochs": args.EPOCHS,
+            "batch_size": args.BATCH_SIZE,
+            "architecture": args.MODEL,
+        }
 
     ######################## DATA LOAD
     print(f'--------------- {args.MODEL} Load Data ---------------')
@@ -75,6 +87,8 @@ def main(args):
     ######################## TRAIN
     print(f'--------------- {args.MODEL} TRAINING ---------------')
     model.train()
+    if args.WANDB:
+        wandb.finish()
 
     ######################## INFERENCE
     print(f'--------------- {args.MODEL} PREDICT ---------------')
@@ -116,6 +130,7 @@ if __name__ == "__main__":
     arg('--DATA_SHUFFLE', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--TEST_SIZE', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
     arg('--SEED', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
+    arg('--WANDB', type=bool, default=False, help='wandb 기록 여부를 선택할 수 있습니다.')
     
     ############### TRAINING OPTION
     arg('--BATCH_SIZE', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')
