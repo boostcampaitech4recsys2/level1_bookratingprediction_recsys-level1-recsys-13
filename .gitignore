@@ -1,6 +1,7 @@
 ### Dataset
 /data/*
 !/data/preprocessed
+!/data/*.csv
 ?
 # wandb
 /wandb
