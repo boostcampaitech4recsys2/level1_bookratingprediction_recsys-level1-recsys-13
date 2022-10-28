@@ -23,11 +23,48 @@ def age_map(x: int) -> int:
     else:
         return 6
 
+
+def location_to_country(users):
+    # Has location_state but no location_country
+    state_to_country = users[(users['location_country'].isna())&(users['location_city'].notnull())]['location_city'].values
+    location_list = set()
+    for location in state_to_country:
+        try:
+            right_location = users[(users['location'].str.contains(location))&(users['location_country'].notnull())]['location'].value_counts().index[0]
+            location_list.add(right_location)
+        except:
+            pass
+    
+    for location in location_list:
+        users.loc[users[users['location_state']==location.split(',')[1]].index,'location_country'] = location.split(',')[2]
+
+    # Has location_city but no location_country
+    city_to_country = users[(users['location_country'].isna())&(users['location_city'].notnull())]['location_city'].values
+    location_list = set()
+    for location in city_to_country:
+        try:
+            right_location = users[(users['location'].str.contains(location))&(users['location_country'].notnull())]['location'].value_counts().index[0]
+            location_list.add(right_location)
+        except:
+            pass
+
+    for location in location_list:
+        users.loc[users[users['location_city']==location.split(',')[0]].index,'location_country'] = location.split(',')[2]
+
+    return users
+
 def process_exp_data(users, books, ratings1, ratings2):
-    # users['location_city'] = users['location'].apply(lambda x: x.split(',')[0])
-    # users['location_state'] = users['location'].apply(lambda x: x.split(',')[1])
+
+    users['location'] = users['location'].str.replace(r'[^0-9a-zA-Z:,]', '')
+    users = users.replace('na', np.nan)
+    users = users.replace('', np.nan)
+
+    users['location_city'] = users['location'].apply(lambda x: x.split(',')[0])
+    users['location_state'] = users['location'].apply(lambda x: x.split(',')[1])
     users['location_country'] = users['location'].apply(lambda x: x.split(',')[2])
-    users = users.drop(['location'], axis=1)
+    
+    users = location_to_country(users)
+    users = users.drop(['location','locaation_city','location_state'], axis=1)
 
     ratings = pd.concat([ratings1, ratings2]).reset_index(drop=True)
 
