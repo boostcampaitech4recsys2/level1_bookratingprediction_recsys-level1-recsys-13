@@ -64,7 +64,7 @@ def process_exp_data(users, books, ratings1, ratings2):
     users['location_country'] = users['location'].apply(lambda x: x.split(',')[2])
     
     users = location_to_country(users)
-    users = users.drop(['location','locaation_city','location_state'], axis=1)
+    users = users.drop(['location','location_city','location_state'], axis=1)
 
     ratings = pd.concat([ratings1, ratings2]).reset_index(drop=True)
 
@@ -173,10 +173,10 @@ def data_exp_load(args):
 
     return data
 
-
+# interaction matrix 
 def exp_interaction_split(args, data):
-    size_uid = data["idx2user"]
-    size_iid = data["iid"].unique()
+    size_uid = data['user2idx'].keys()
+    size_iid = data['isbn2idx'].keys()
 
     ui_shape = (len(size_uid), len(size_iid))
 
@@ -186,9 +186,9 @@ def exp_interaction_split(args, data):
     user_index = ratings["uid"].astype(user_cat).cat.codes
     book_index = ratings["iid"].astype(book_cat).cat.codes
 
-    # pivot table
     interactions = sparse.csr_matrix((ratings["rating"], (user_index,book_index)), shape=ui_shape)
-    
+    # instead, make train and test matrix in the first place with their indices)
+
     return interactions
 
 
