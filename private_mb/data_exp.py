@@ -1,12 +1,20 @@
 import numpy as np
 import pandas as pd
+from pandas.api.types import CategoricalDtype
+
+from scipy import sparse
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader, Dataset
 
-from pandas.api.types import CategoricalDtype
-from scipy import sparse
+from xgboost import XGBRegressor, XGBClassifier
+from lightgbm import LGBMRegressor, LGBMClassifier, LGBMRanker
+from catboost import CatBoostRegressor, CatBoostClassifier, Pool
+
+
 
 def age_map(x: int) -> int:
     x = int(x)
@@ -36,7 +44,7 @@ def location_to_country(users):
             pass
     
     for location in location_list:
-        users.loc[users[users['location_state']==location.split(',')[1]].index,'location_country'] = location.split(',')[2]
+        users.loc[users[(users['location_state']==location.split(',')[1])&(users['location_country'].isna())].index,'location_country'] = location.split(',')[2]
 
     # Has location_city but no location_country
     city_to_country = users[(users['location_country'].isna())&(users['location_city'].notnull())]['location_city'].values
@@ -49,9 +57,12 @@ def location_to_country(users):
             pass
 
     for location in location_list:
-        users.loc[users[users['location_city']==location.split(',')[0]].index,'location_country'] = location.split(',')[2]
+        users.loc[users[(users['location_city']==location.split(',')[0])&(users['location_country'].isna())].index,'location_country'] = location.split(',')[2]
+
+    users.fillna('unknown',inplace=True)
 
     return users
+
 
 def process_exp_data(users, books, ratings1, ratings2):
 
@@ -66,12 +77,26 @@ def process_exp_data(users, books, ratings1, ratings2):
     users = location_to_country(users)
     users = users.drop(['location','location_city','location_state'], axis=1)
 
+    # User - Label encoding
+    u_encoder = LabelEncoder()
+    u_encoder.fit(users['location_country'])
+    users['location_country'] = u_encoder.transform(users['location_country'])
+
+    # Books - Label encoding
+    b_label = ['category', 'language', 'book_author'] # 'year_of_publication'
+    b_encoder = dict()
+    for l in b_label:
+        b_encoder[l] = LabelEncoder()
+        b_encoder[l].fit(books[l])
+        books[l] = b_encoder[l].transform(books[l])
+
     ratings = pd.concat([ratings1, ratings2]).reset_index(drop=True)
 
     # 인덱싱 처리된 데이터 조인
-    exp_df = ratings.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'publisher', 'language', 'book_author']], on='isbn', how='left')
-    train_df = ratings1.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'publisher', 'language', 'book_author']], on='isbn', how='left')
-    test_df = ratings2.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'publisher', 'language', 'book_author']], on='isbn', how='left')
+    # Add or replace with 'year_of_publication'
+    exp_df = ratings.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'language', 'book_author']], on='isbn', how='left')
+    train_df = ratings1.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'language', 'book_author']], on='isbn', how='left')
+    test_df = ratings2.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'language', 'book_author']], on='isbn', how='left')
 
     # 인덱싱 처리
     # loc_city2idx = {v:k for k,v in enumerate(exp_df['location_city'].unique())}
@@ -95,16 +120,16 @@ def process_exp_data(users, books, ratings1, ratings2):
 
     # book 파트 인덱싱
     category2idx = {v:k for k,v in enumerate(exp_df['category'].unique())}
-    publisher2idx = {v:k for k,v in enumerate(exp_df['publisher'].unique())}
+    # publisher2idx = {v:k for k,v in enumerate(exp_df['publisher'].unique())}
     language2idx = {v:k for k,v in enumerate(exp_df['language'].unique())}
     author2idx = {v:k for k,v in enumerate(exp_df['book_author'].unique())}
 
     train_df['category'] = train_df['category'].map(category2idx)
-    train_df['publisher'] = train_df['publisher'].map(publisher2idx)
+    # train_df['publisher'] = train_df['publisher'].map(publisher2idx)
     train_df['language'] = train_df['language'].map(language2idx)
     train_df['book_author'] = train_df['book_author'].map(author2idx)
     test_df['category'] = test_df['category'].map(category2idx)
-    test_df['publisher'] = test_df['publisher'].map(publisher2idx)
+    # test_df['publisher'] = test_df['publisher'].map(publisher2idx)
     test_df['language'] = test_df['language'].map(language2idx)
     test_df['book_author'] = test_df['book_author'].map(author2idx)
 
@@ -113,7 +138,7 @@ def process_exp_data(users, books, ratings1, ratings2):
         "loc_state2idx":loc_state2idx,
         "loc_country2idx":loc_country2idx,
         "category2idx":category2idx,
-        "publisher2idx":publisher2idx,
+        # "publisher2idx":publisher2idx,
         "language2idx":language2idx,
         "author2idx":author2idx,
     }
@@ -130,8 +155,13 @@ def data_exp_load(args):
     test = pd.read_csv(args.DATA_PATH + 'test_ratings.csv')
     sub = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
 
-    # books 데이터 일부가 isbn이 잘못된 것이 있어 url에 있는 isbn으로 대체합니다
+    # books 
     books['isbn'] = books['img_url'].apply(lambda x: x.split('P/')[1][:10])
+    books['category'] = books_df['category'].apply(lambda x: re.sub('[\W_]+',' ',str(x)).strip())
+    books.fillna('-1',inplace=True)
+
+    # ratings
+    ratings.fillna(5,inplace=True)
 
     ids = pd.concat([train['user_id'], sub['user_id']]).unique()
     isbns = pd.concat([train['isbn'], sub['isbn']]).unique()
@@ -152,15 +182,22 @@ def data_exp_load(args):
     test['isbn'] = test['isbn'].map(isbn2idx)
     books['isbn'] = books['isbn'].map(isbn2idx)
 
+    # interaction matrix(train, sub, test)
+
     idx, exp_train, exp_test = process_exp_data(users, books, train, test)
-    #field_dims = np.array([len(user2idx), len(isbn2idx),
-    #                        6, len(idx['loc_city2idx']), len(idx['loc_state2idx']), len(idx['loc_country2idx']),
-    #                        len(idx['category2idx']), len(idx['publisher2idx']), len(idx['language2idx']), len(idx['author2idx'])], dtype=np.uint32)
+    field_dims = np.array([len(user2idx), len(isbn2idx),
+                            6, # len(idx['loc_city2idx']), 
+                            # len(idx['loc_state2idx']), 
+                            len(idx['loc_country2idx']),
+                            len(idx['category2idx']), 
+                            #len(idx['publisher2idx']), 
+                            len(idx['language2idx']), 
+                            len(idx['author2idx'])], dtype=np.uint32)
 
     data = {
             'train':exp_train,
             'test':exp_test.drop(['rating'], axis=1),
-            #'field_dims':field_dims,
+            'field_dims':field_dims,
             'users':users,
             'books':books,
             'sub':sub,
@@ -173,7 +210,7 @@ def data_exp_load(args):
 
     return data
 
-# interaction matrix 
+
 def exp_interaction_split(args, data):
     size_uid = data['user2idx'].keys()
     size_iid = data['isbn2idx'].keys()
