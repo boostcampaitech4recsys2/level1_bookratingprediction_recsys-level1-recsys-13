@@ -16,6 +16,13 @@ from src import DeepCoNN
 
 import wandb
 
+def predicts_map(x: float) -> float:
+    if x < 1:
+        return 1.0
+    elif x > 10:
+        return 10.0
+    else:
+        return x
 
 def main(args):
     seed_everything(args.SEED)
@@ -101,11 +108,12 @@ def main(args):
     else:
         pass
 
-    ######################## SAVE PREDICT
+    ######################## SAVE PREDICT & HANDLE PREDICT
     print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
     submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
     if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
         submission['rating'] = predicts
+        submission['rating'] = submission['rating'].apply(predicts_map)
     else:
         pass
 
