@@ -9,6 +9,8 @@ import torch.optim as optim
 from ._models import _NeuralCollaborativeFiltering, _WideAndDeepModel, _DeepCrossNetworkModel
 from ._models import rmse, RMSELoss
 
+import wandb
+
 class NeuralCollaborativeFiltering:
 
     def __init__(self, args, data):
@@ -37,6 +39,9 @@ class NeuralCollaborativeFiltering:
                                                     embed_dim=self.embed_dim, mlp_dims=self.mlp_dims, dropout=self.dropout).to(self.device)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.learning_rate, amsgrad=True, weight_decay=self.weight_decay)
 
+        self.wandb_model_name = args.MODEL
+        self.wandb_mode = args.WANDB
+
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
@@ -58,6 +63,9 @@ class NeuralCollaborativeFiltering:
 
             rmse_score = self.predict_train()
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
+
+            if self.wandb_mode:
+                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
 
 
     def predict_train(self):
@@ -108,6 +116,9 @@ class WideAndDeepModel:
         self.model = _WideAndDeepModel(self.field_dims, self.embed_dim, mlp_dims=self.mlp_dims, dropout=self.dropout).to(self.device)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.learning_rate, amsgrad=True, weight_decay=self.weight_decay)
 
+        self.wandb_model_name = args.MODEL
+        self.wandb_mode = args.WANDB
+
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
@@ -129,6 +140,9 @@ class WideAndDeepModel:
 
             rmse_score = self.predict_train()
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
+
+            if self.wandb_mode:
+                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
 
 
     def predict_train(self):
@@ -180,6 +194,9 @@ class DeepCrossNetworkModel:
         self.model = _DeepCrossNetworkModel(self.field_dims, self.embed_dim, num_layers=self.num_layers, mlp_dims=self.mlp_dims, dropout=self.dropout).to(self.device)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.learning_rate, amsgrad=True, weight_decay=self.weight_decay)
 
+        self.wandb_model_name = args.MODEL
+        self.wandb_mode = args.WANDB
+
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
@@ -201,6 +218,9 @@ class DeepCrossNetworkModel:
 
             rmse_score = self.predict_train()
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
+
+            if self.wandb_mode:
+                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
 
 
     def predict_train(self):

@@ -1,6 +1,5 @@
 ### Dataset
-/data/*
-!/data/preprocessed
+/data/images
 ?
 # wandb
 /wandb
