@@ -17,8 +17,10 @@ def age_map(x: int) -> int:
         return 4
     elif x >= 50 and x < 60:
         return 5
-    else:
+    elif x >= 60 and x < 70:
         return 6
+    else:
+        return 7
 
 def process_context_data(users, books, ratings1, ratings2):
     users['location_city'] = users['location'].apply(lambda x: x.split(',')[0])
@@ -108,7 +110,7 @@ def context_data_load(args):
 
     idx, context_train, context_test = process_context_data(users, books, train, test)
     field_dims = np.array([len(user2idx), len(isbn2idx),
-                            6, len(idx['loc_city2idx']), len(idx['loc_state2idx']), len(idx['loc_country2idx']),
+                            7, len(idx['loc_city2idx']), len(idx['loc_state2idx']), len(idx['loc_country2idx']),
                             len(idx['category2idx']), len(idx['publisher2idx']), len(idx['language2idx']), len(idx['author2idx'])], dtype=np.uint32)
 
     data = {
