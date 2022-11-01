@@ -5,3 +5,4 @@ transformers
 xgboost
 lightgbm
 catboost
+hyperopt

@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, rmse
+from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, rmse
 
 def main(args):
     seed_everything(args.SEED)
@@ -44,9 +44,7 @@ def main(args):
         import nltk
         nltk.download('punkt')
         data = text_data_load(args)
-    elif args.MODEL == 'LGBM':
-        data = dl_data_load(args)
-    elif args.MODEL == 'CATB':
+    elif args.MODEL in ('LGBM','CATB'):
         data = dl_data_load(args)   
     else:
         pass
@@ -64,10 +62,6 @@ def main(args):
     elif args.MODEL=='CNN_FM':
         data = image_data_split(args, data)
         data = image_data_loader(args, data)
-
-    elif args.MODEL=='DeepCoNN':
-        data = text_data_split(args, data)
-        data = text_data_loader(args, data)
 
     elif args.MODEL=='DeepCoNN':
         data = text_data_split(args, data)
@@ -97,6 +91,8 @@ def main(args):
         model = DeepCoNN(args, data)
     elif args.MODEL=='LGBM':
         model = LGBM(args, data)
+    elif args.MODEL=='CATB':
+        model = CATB(args, data)
     else:
         pass
 
@@ -118,16 +114,16 @@ def main(args):
         predicts  = model.predict(data['test_dataloader'])
     elif args.MODEL=='DeepCoNN':
         predicts  = model.predict(data['test_dataloader'])
-    elif args.MODEL=='LGBM':
+    elif args.MODEL in ('LGBM', 'CATB'):
         predicts  = model.predict(data['test'])
         # print('RMSE(LGBM):', rmse(data['test'], predicts))
     else:
         pass
-
+    
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
     submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
-    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM'):
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB'):
         submission['rating'] = predicts
     else:
         pass
@@ -207,6 +203,10 @@ if __name__ == "__main__":
     arg('--LGBM_MAX_DEPTH', type=int, default=10, help='LGBM에서 트리의 최대 깊이를 조정할 수 있습니다.')
     arg('--LGBM_NUM_LEAVES', type=int, default=500, help='LGBM에서 전체 Tree의 leaves 수를 조정할 수 있습니다.')
 
+    ############### CATB
+    arg('--CATB_TYPE', type=str, default='R', help='CATB Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
+    arg('--CATB_ITER', type=int, default=10000, help='same as n_estiamtors')
+    arg('--CATB_DEPTH', type=int, default=10, help='Depth of the tree')
 
 
     args = parser.parse_args()

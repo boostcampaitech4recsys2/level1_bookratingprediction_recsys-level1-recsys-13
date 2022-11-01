@@ -7,6 +7,8 @@ from xgboost import XGBRegressor, XGBClassifier
 from lightgbm import LGBMRegressor, LGBMClassifier, LGBMRanker
 from catboost import CatBoostRegressor, CatBoostClassifier, Pool
 
+from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
+
 from private_mb import data_exp_load, exp_data_split, exp_data_loader
 
 def LGBM(args, data):
@@ -29,11 +31,33 @@ def LGBM(args, data):
         lgbm = LGBMClassifier(**params, n_estimators=1500, early_stopping_rounds=100, random_state=args.SEED)
         # rmse(y_test,catboost_pred_cl.squeeze(1))
     else:
-        lgbm = LGBMRegressor(**params, n_estimators=2000, early_stopping_rounds=100, random_state=args.SEED)
+        lgbm = LGBMRegressor(**params, n_estimators=12000, early_stopping_rounds=500, random_state=args.SEED)
 
-    lgbm.fit(X_train, y_train, eval_set = (X_valid, y_valid))
+    evaluation = [(X_train, y_train),(X_valid, y_valid)]
+    lgbm.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse',verbose=1000)
+
+    trial = Trials()
+    best_hyperparams = fmin(fn = objective)
 
     return lgbm
+
+
+def CATB(args, data):
+    params = {'iterations': args.CATB_ITER
+            'learning_rate':args.LR
+            'depth': args.CATB_DEPTH
+            }
+    
+    if args.LGBM_TYPE == 'C':
+        catb = CatBoostClassifier(**params, n_estimators=1500, random_state=args.SEED)
+        # rmse(y_test,catboost_pred_cl.squeeze(1))
+    else:
+        catb = CatBoostRegressor(**params, random_state=args.SEED)
+
+    evaluation = [(X_train, y_train),(X_valid, y_valid)]
+    catb.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse',verbose=1000, early_stopping_rounds=500)
+
+    return catb
 
 
 def modify_range(rating):
