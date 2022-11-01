@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, rmse
+from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, XGB, rmse
 
 def main(args):
     seed_everything(args.SEED)
@@ -73,7 +73,7 @@ def main(args):
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
 
-    if args.MODEL in ('LGBM', 'CATB'):
+    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
         data = context_data_split(args, data)
     
     else:
@@ -97,12 +97,14 @@ def main(args):
         model = DeepCoNN(args, data)
     elif args.MODEL=='LGBM':
         model = LGBM(args, data)
+    elif args.MODEL=='XGB':
+        model = XGB(args, data)
     else:
         pass
 
     ######################## TRAIN
     print(f'--------------- {args.MODEL} TRAINING ---------------')
-    if args.MODEL in ('LGBM', 'CATB'):
+    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
         pass
     else:
         model.train()
@@ -207,7 +209,13 @@ if __name__ == "__main__":
     arg('--LGBM_MAX_DEPTH', type=int, default=10, help='LGBM에서 트리의 최대 깊이를 조정할 수 있습니다.')
     arg('--LGBM_NUM_LEAVES', type=int, default=500, help='LGBM에서 전체 Tree의 leaves 수를 조정할 수 있습니다.')
 
-
+    ############### XGB
+    arg('--XGB_TYPE', type=str, default='R', help='LGBM Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
+    arg('--XGB_BOOSTER', type=str, default='gbtree', help='XGB에서 실행시킬 알고리즘(gbtree, gblinear)을 정의할 수 있습니다.')
+    arg('--XGB_N_ESTI', type=int, default='10', help='XGB에서 학습에 활용될 weak leaner의 반복 수를 조정할 수 있습니다.')
+    arg('--XGB_LAMBDA', type=int, default=1, help='XGB에서 L2 regularization 정규화 값을 조정할 수 있습니다.')
+    arg('--XGB_MIN_CHILD', type=int, default=1, help='XGB에서 leaf node에 포함되는 최소 관측치의 수를 조정할 수 있습니다.[0,inf]')
+    arg('--XGB_MAX_DEPTH', type=int, default=6, help='XGB에서 트리의 최대 깊이를 조정할 수 있습니다. [0,inf]')
 
     args = parser.parse_args()
     main(args)
