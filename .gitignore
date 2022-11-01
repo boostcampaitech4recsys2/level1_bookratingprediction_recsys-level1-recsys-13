@@ -1,6 +1,10 @@
 ### Dataset
 /data/images
+/submit
 ?
+#private_sj
+/private_sj/wandb
+/private_sj/submit
 # wandb
 /wandb
 ?
