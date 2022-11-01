@@ -95,7 +95,7 @@ def XGB(args, data):
     else:
         xgb = XGBRegressor(**params, early_stopping_rounds=100, random_state=args.SEED)
 
-    xgb.fit(X_train, y_train, eval_set = (X_valid, y_valid), verbose=True)
+    xgb.fit(X_train, y_train, eval_set = [(X_valid, y_valid)], verbose=True)
 
     return xgb
 
