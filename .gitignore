@@ -1,5 +1,9 @@
 ### Dataset
 /data/images
+/submit
+?
+# private workspace
+
 ?
 # wandb
 /wandb
