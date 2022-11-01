@@ -7,6 +7,8 @@ from xgboost import XGBRegressor, XGBClassifier
 from lightgbm import LGBMRegressor, LGBMClassifier, LGBMRanker
 from catboost import CatBoostRegressor, CatBoostClassifier, Pool
 
+from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
+
 from private_mb import data_exp_load, exp_data_split, exp_data_loader
 
 def LGBM(args, data):
@@ -34,6 +36,25 @@ def LGBM(args, data):
     lgbm.fit(X_train, y_train, eval_set = (X_valid, y_valid))
 
     return lgbm
+    
+def CATB(args, data):
+    X_train, X_valid, y_train, y_valid = data['X_train'], data['X_valid'], data['y_train'], data['y_valid']
+    
+    params = {'iterations': args.CATB_ITER,
+            'learning_rate':args.LR,
+            'depth': args.CATB_DEPTH
+            }
+    
+    if args.LGBM_TYPE == 'C':
+        catb = CatBoostClassifier(**params, eval_metric='rmse', random_state=args.SEED)
+        # rmse(y_test,catboost_pred_cl.squeeze(1))
+    else:
+        catb = CatBoostRegressor(**params, random_state=args.SEED)
+
+    evaluation = [(X_train, y_train),(X_valid, y_valid)]
+    catb.fit(X_train, y_train, eval_set = evaluation, verbose=1000, early_stopping_rounds=500)
+
+    return catb
 
 def XGB(args, data):
     X_train, X_valid, y_train, y_valid = data['X_train'], data['X_valid'], data['y_train'], data['y_valid']

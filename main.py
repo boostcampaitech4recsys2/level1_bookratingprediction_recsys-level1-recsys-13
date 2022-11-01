@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, XGB, rmse
+from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
 
 def main(args):
     seed_everything(args.SEED)
@@ -44,10 +44,8 @@ def main(args):
         import nltk
         nltk.download('punkt')
         data = text_data_load(args)
-    elif args.MODEL == 'LGBM':
-        data = dl_data_load(args)
-    elif args.MODEL == 'CATB':
-        data = dl_data_load(args)   
+    elif args.MODEL in ('LGBM','CATB','XGB'):
+        data = context_data_load(args)
     else:
         pass
 
@@ -73,7 +71,7 @@ def main(args):
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
 
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
+    elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         data = context_data_split(args, data)
     
     else:
@@ -97,6 +95,8 @@ def main(args):
         model = DeepCoNN(args, data)
     elif args.MODEL=='LGBM':
         model = LGBM(args, data)
+    elif args.MODEL=='CATB':
+        model = CATB(args, data)
     elif args.MODEL=='XGB':
         model = XGB(args, data)
     else:
@@ -120,7 +120,7 @@ def main(args):
         predicts  = model.predict(data['test_dataloader'])
     elif args.MODEL=='DeepCoNN':
         predicts  = model.predict(data['test_dataloader'])
-    elif args.MODEL=='LGBM':
+    elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         predicts  = model.predict(data['test'])
         # print('RMSE(LGBM):', rmse(data['test'], predicts))
     else:
@@ -208,6 +208,11 @@ if __name__ == "__main__":
     arg('--LGBM_LAMBDA', type=int, default=0.1, help='LGBM에서 regularization 정규화 값을 조정할 수 있습니다.')
     arg('--LGBM_MAX_DEPTH', type=int, default=10, help='LGBM에서 트리의 최대 깊이를 조정할 수 있습니다.')
     arg('--LGBM_NUM_LEAVES', type=int, default=500, help='LGBM에서 전체 Tree의 leaves 수를 조정할 수 있습니다.')
+
+    ############### CATB
+    arg('--CATB_TYPE', type=str, default='R', help='CATB Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
+    arg('--CATB_ITER', type=int, default=10000, help='same as n_estiamtors')
+    arg('--CATB_DEPTH', type=int, default=10, help='Depth of the tree')
 
     ############### XGB
     arg('--XGB_TYPE', type=str, default='R', help='LGBM Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
