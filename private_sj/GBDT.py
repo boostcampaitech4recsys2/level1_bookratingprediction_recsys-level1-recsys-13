@@ -9,8 +9,6 @@ from catboost import CatBoostRegressor, CatBoostClassifier, Pool
 
 from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader
-
 def LGBM(args, data):
     X_train, X_valid, y_train, y_valid = data['X_train'], data['X_valid'], data['y_train'], data['y_valid']
     
@@ -86,7 +84,7 @@ def XGB(args, data):
                 'n_estimators':args.XGB_N_ESTI,
                 'reg_lambda': args.XGB_LAMBDA,
                 'learning_rate': args.LR,
-                'base_score' : 7
+                'base_score': 7
                 }
 
     if args.XGB_TYPE == 'C':
@@ -100,8 +98,6 @@ def XGB(args, data):
     xgb.fit(X_train, y_train, eval_set = [(X_valid, y_valid)], verbose=True)
 
     return xgb
-
-
 
 
 def modify_range(rating):
