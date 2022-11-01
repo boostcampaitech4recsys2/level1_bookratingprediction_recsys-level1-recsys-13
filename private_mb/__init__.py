@@ -15,4 +15,4 @@ from .utils import seed_everything
 
 from .context_data_exp import data_exp_load, exp_data_split, exp_data_loader
 from .dl_data_exp import dl_data_load_exp
-from .GBDT import LGBM, CATB, rmse
+from .GBDT import LGBM, CATB, XGB, rmse

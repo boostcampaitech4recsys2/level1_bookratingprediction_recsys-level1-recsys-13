@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, rmse
+from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
 
 def main(args):
     seed_everything(args.SEED)
@@ -44,8 +44,8 @@ def main(args):
         import nltk
         nltk.download('punkt')
         data = text_data_load(args)
-    elif args.MODEL in ('LGBM','CATB'):
-        data = context_data_load(args)   
+    elif args.MODEL in ('LGBM','CATB','XGB'):
+        data = context_data_load(args)
     else:
         pass
 
@@ -67,7 +67,11 @@ def main(args):
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
 
-    elif args.MODEL in ('LGBM', 'CATB'):
+    elif args.MODEL=='DeepCoNN':
+        data = text_data_split(args, data)
+        data = text_data_loader(args, data)
+
+    elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         data = context_data_split(args, data)
     
     else:
@@ -93,12 +97,14 @@ def main(args):
         model = LGBM(args, data)
     elif args.MODEL=='CATB':
         model = CATB(args, data)
+    elif args.MODEL=='XGB':
+        model = XGB(args, data)
     else:
         pass
 
     ######################## TRAIN
     print(f'--------------- {args.MODEL} TRAINING ---------------')
-    if args.MODEL in ('LGBM', 'CATB'):
+    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
         pass
     else:
         model.train()
@@ -114,7 +120,7 @@ def main(args):
         predicts  = model.predict(data['test_dataloader'])
     elif args.MODEL=='DeepCoNN':
         predicts  = model.predict(data['test_dataloader'])
-    elif args.MODEL in ('LGBM', 'CATB'):
+    elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         predicts  = model.predict(data['test'])
         # print('RMSE(LGBM):', rmse(data['test'], predicts))
     else:
@@ -123,7 +129,7 @@ def main(args):
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
     submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
-    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB'):
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'):
         submission['rating'] = predicts
     else:
         pass
@@ -144,7 +150,7 @@ if __name__ == "__main__":
 
     ############### BASIC OPTION
     arg('--DATA_PATH', type=str, default='data/', help='Data path를 설정할 수 있습니다.')
-    arg('--MODEL', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB'],
+    arg('--MODEL', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--DATA_SHUFFLE', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--TEST_SIZE', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
@@ -208,6 +214,13 @@ if __name__ == "__main__":
     arg('--CATB_ITER', type=int, default=10000, help='same as n_estiamtors')
     arg('--CATB_DEPTH', type=int, default=10, help='Depth of the tree')
 
+    ############### XGB
+    arg('--XGB_TYPE', type=str, default='R', help='LGBM Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
+    arg('--XGB_BOOSTER', type=str, default='gbtree', help='XGB에서 실행시킬 알고리즘(gbtree, gblinear)을 정의할 수 있습니다.')
+    arg('--XGB_N_ESTI', type=int, default='10', help='XGB에서 학습에 활용될 weak leaner의 반복 수를 조정할 수 있습니다.')
+    arg('--XGB_LAMBDA', type=int, default=1, help='XGB에서 L2 regularization 정규화 값을 조정할 수 있습니다.')
+    arg('--XGB_MIN_CHILD', type=int, default=1, help='XGB에서 leaf node에 포함되는 최소 관측치의 수를 조정할 수 있습니다.[0,inf]')
+    arg('--XGB_MAX_DEPTH', type=int, default=6, help='XGB에서 트리의 최대 깊이를 조정할 수 있습니다. [0,inf]')
 
     args = parser.parse_args()
     main(args)
