@@ -7,6 +7,8 @@
 # private workspace
 /private_sj/wandb
 /private_sj/submit
+/private_sj/catboost_info/*
+
 # wandb
 /wandb
 ?
