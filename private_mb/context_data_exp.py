@@ -9,12 +9,7 @@ from sklearn.preprocessing import LabelEncoder
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader, Dataset
-
-from xgboost import XGBRegressor, XGBClassifier
-from lightgbm import LGBMRegressor, LGBMClassifier, LGBMRanker
-from catboost import CatBoostRegressor, CatBoostClassifier, Pool
-
-
+import re
 
 def age_map(x: int) -> int:
     x = int(x)
@@ -59,7 +54,7 @@ def location_to_country(users):
     for location in location_list:
         users.loc[users[(users['location_city']==location.split(',')[0])&(users['location_country'].isna())].index,'location_country'] = location.split(',')[2]
 
-    users.fillna('unknown',inplace=True)
+    users['location_country'].fillna('unknown',inplace=True)
 
     return users
 
@@ -134,8 +129,8 @@ def process_exp_data(users, books, ratings1, ratings2):
     test_df['book_author'] = test_df['book_author'].map(author2idx)
 
     idx = {
-        "loc_city2idx":loc_city2idx,
-        "loc_state2idx":loc_state2idx,
+        # "loc_city2idx":loc_city2idx,
+        # "loc_state2idx":loc_state2idx,
         "loc_country2idx":loc_country2idx,
         "category2idx":category2idx,
         # "publisher2idx":publisher2idx,
@@ -157,11 +152,11 @@ def data_exp_load(args):
 
     # books 
     books['isbn'] = books['img_url'].apply(lambda x: x.split('P/')[1][:10])
-    books['category'] = books_df['category'].apply(lambda x: re.sub('[\W_]+',' ',str(x)).strip())
-    books.fillna('-1',inplace=True)
+    books['category'] = books['category'].apply(lambda x: re.sub('[\W_]+',' ',str(x)).strip())
+    # books.fillna('-1',inplace=True)
 
     # ratings
-    ratings.fillna(5,inplace=True)
+    train['rating'].fillna(5,inplace=True)
 
     ids = pd.concat([train['user_id'], sub['user_id']]).unique()
     isbns = pd.concat([train['isbn'], sub['isbn']]).unique()
@@ -183,6 +178,7 @@ def data_exp_load(args):
     books['isbn'] = books['isbn'].map(isbn2idx)
 
     # interaction matrix(train, sub, test)
+    # interaction = exp_interaction(idx2user, idx2isbn, train, sub)
 
     idx, exp_train, exp_test = process_exp_data(users, books, train, test)
     field_dims = np.array([len(user2idx), len(isbn2idx),
@@ -211,22 +207,42 @@ def data_exp_load(args):
     return data
 
 
-def exp_interaction_split(args, data):
-    size_uid = data['user2idx'].keys()
-    size_iid = data['isbn2idx'].keys()
+# def exp_interaction(idx2user, idx2isbn, train, sub, test):
+#     size_uid = idx2user.keys()
+#     size_iid = idx2isbn.keys()
 
-    ui_shape = (len(size_uid), len(size_iid))
+#     ui_shape = (len(size_uid), len(size_iid))
 
-    user_cat = CategoricalDtype(categories=sorted(size_uid), ordered=True)
-    book_cat = CategoricalDtype(categories=sorted(size_iid), ordered=True)
+#     user_cat = CategoricalDtype(categories=sorted(size_uid), ordered=True)
+#     book_cat = CategoricalDtype(categories=sorted(size_iid), ordered=True)
 
-    user_index = ratings["uid"].astype(user_cat).cat.codes
-    book_index = ratings["iid"].astype(book_cat).cat.codes
+#     ratings = pd.concat([train, sub, test])
+#     user_index = ratings["user_id"].astype(user_cat).cat.codes
+#     book_index = ratings["isbn"].astype(book_cat).cat.codes
 
-    interactions = sparse.csr_matrix((ratings["rating"], (user_index,book_index)), shape=ui_shape)
-    # instead, make train and test matrix in the first place with their indices)
+#     interactions = sparse.coo_matrix((ratings["rating"], (user_index,book_index)), shape=ui_shape)
 
-    return interactions
+#     uids, iids, data = shuffle_data(interactions, random_state)
+#     train_idx, test_idx = cutoff_by_user(uids, test_percentage)
+
+#     train = sparse.coo_matrix(
+#         (data[train_idx], (uids[train_idx], iids[train_idx])),
+#         shape=ui_shape,
+#         dtype=interactions.dtype,
+#     )
+    
+#     sub = sparse.coo_matrix(
+#         (data[sub_idx], (uids[sub_idx], iids[sub_idx])),
+#         shape=ui_shape,
+#         dtype=interactions.dtype,
+#     )
+
+#     test = sparse.coo_matrix(
+#         (data[test_idx], (uids[test_idx], iids[test_idx])),
+#         shape=ui_shape,
+#         dtype=interactions.dtype,
+
+#     return train, sub, test
 
 
 def exp_data_split(args, data):

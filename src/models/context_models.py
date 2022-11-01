@@ -132,6 +132,7 @@ class FieldAwareFactorizationMachineModel:
                     total_loss = 0
 
             rmse_score = self.predict_train()
+            wandb.log({"rmse": rmse_score})
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
 
             if self.wandb_mode:
