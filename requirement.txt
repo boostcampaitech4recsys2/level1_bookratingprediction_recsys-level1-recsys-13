@@ -2,3 +2,7 @@ pandas
 scikit-learn
 nltk
 transformers
+xgboost
+lightgbm
+catboost
+hyperopt

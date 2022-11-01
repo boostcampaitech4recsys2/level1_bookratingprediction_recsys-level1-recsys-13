@@ -1,7 +1,8 @@
 ### Dataset
 /data/images
-/submit
+/submit/*
 ?
+/catboost_info/*
 
 # private workspace
 /private_sj/wandb
