@@ -1,6 +1,6 @@
 ### Dataset
 /data/*
-!/data/preprocessed
+/submit
 ?
 # wandb
 /wandb

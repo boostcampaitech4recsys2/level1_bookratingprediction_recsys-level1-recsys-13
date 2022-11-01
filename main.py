@@ -14,9 +14,23 @@ from src import NeuralCollaborativeFiltering, WideAndDeepModel, DeepCrossNetwork
 from src import CNN_FM
 from src import DeepCoNN
 
+import wandb
+
+from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, rmse
 
 def main(args):
     seed_everything(args.SEED)
+
+    ######################## SET WANDB
+    if args.WANDB:
+        wandb.init(project="test-project", entity="ai-tech-4-recsys13")
+        wandb.run.name = 'data_mb_' + args.MODEL + '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
+        wandb.config = {
+            "learning_rate": args.LR ,
+            "epochs": args.EPOCHS,
+            "batch_size": args.BATCH_SIZE,
+            "architecture": args.MODEL,
+        }
 
     ######################## DATA LOAD
     print(f'--------------- {args.MODEL} Load Data ---------------')
@@ -30,6 +44,10 @@ def main(args):
         import nltk
         nltk.download('punkt')
         data = text_data_load(args)
+    elif args.MODEL == 'LGBM':
+        data = dl_data_load(args)
+    elif args.MODEL == 'CATB':
+        data = dl_data_load(args)   
     else:
         pass
 
@@ -50,6 +68,14 @@ def main(args):
     elif args.MODEL=='DeepCoNN':
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
+
+    elif args.MODEL=='DeepCoNN':
+        data = text_data_split(args, data)
+        data = text_data_loader(args, data)
+
+    if args.MODEL in ('LGBM', 'CATB'):
+        data = context_data_split(args, data)
+    
     else:
         pass
 
@@ -69,12 +95,20 @@ def main(args):
         model = CNN_FM(args, data)
     elif args.MODEL=='DeepCoNN':
         model = DeepCoNN(args, data)
+    elif args.MODEL=='LGBM':
+        model = LGBM(args, data)
     else:
         pass
 
     ######################## TRAIN
     print(f'--------------- {args.MODEL} TRAINING ---------------')
-    model.train()
+    if args.MODEL in ('LGBM', 'CATB'):
+        pass
+    else:
+        model.train()
+    
+    if args.WANDB:
+        wandb.finish()
 
     ######################## INFERENCE
     print(f'--------------- {args.MODEL} PREDICT ---------------')
@@ -84,13 +118,16 @@ def main(args):
         predicts  = model.predict(data['test_dataloader'])
     elif args.MODEL=='DeepCoNN':
         predicts  = model.predict(data['test_dataloader'])
+    elif args.MODEL=='LGBM':
+        predicts  = model.predict(data['test'])
+        # print('RMSE(LGBM):', rmse(data['test'], predicts))
     else:
         pass
 
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
     submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
-    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM'):
         submission['rating'] = predicts
     else:
         pass
@@ -111,12 +148,14 @@ if __name__ == "__main__":
 
     ############### BASIC OPTION
     arg('--DATA_PATH', type=str, default='data/', help='Data path를 설정할 수 있습니다.')
-    arg('--MODEL', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'],
+    arg('--MODEL', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--DATA_SHUFFLE', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--TEST_SIZE', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
     arg('--SEED', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
+    arg('--WANDB', type=bool, default=False, help='wandb 기록 여부를 선택할 수 있습니다.')
     
+
     ############### TRAINING OPTION
     arg('--BATCH_SIZE', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')
     arg('--EPOCHS', type=int, default=10, help='Epoch 수를 조정할 수 있습니다.')
@@ -160,6 +199,15 @@ if __name__ == "__main__":
     arg('--DEEPCONN_KERNEL_SIZE', type=int, default=3, help='DEEP_CONN에서 1D conv의 kernel 크기를 조정할 수 있습니다.')
     arg('--DEEPCONN_WORD_DIM', type=int, default=768, help='DEEP_CONN에서 1D conv의 입력 크기를 조정할 수 있습니다.')
     arg('--DEEPCONN_OUT_DIM', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
+
+    ############### LGBM
+    arg('--LGBM_TYPE', type=str, default='R', help='LGBM Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
+    arg('--LGBM_ALG', type=str, default='gbdt', help='LGBM에서 실행시킬 알고리즘을 정의할 수 있습니다.')
+    arg('--LGBM_LAMBDA', type=int, default=0.1, help='LGBM에서 regularization 정규화 값을 조정할 수 있습니다.')
+    arg('--LGBM_MAX_DEPTH', type=int, default=10, help='LGBM에서 트리의 최대 깊이를 조정할 수 있습니다.')
+    arg('--LGBM_NUM_LEAVES', type=int, default=500, help='LGBM에서 전체 Tree의 leaves 수를 조정할 수 있습니다.')
+
+
 
     args = parser.parse_args()
     main(args)
