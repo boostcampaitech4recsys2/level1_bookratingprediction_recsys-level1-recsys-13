@@ -74,7 +74,8 @@ def XGB(args, data):
                 'reg_lambda': args.XGB_LAMBDA,
                 'learning_rate': args.LR,
                 'max_depth': args.XGB_MAX_DEPTH,
-                'min_child_weight': args.XGB_MIN_CHILD
+                'min_child_weight': args.XGB_MIN_CHILD,
+                'base_score' : 7
                 }
     else: #args.XGB_BOOSTER == 'gblinear'
         parmas = {'objective':'reg:linear',
@@ -83,6 +84,7 @@ def XGB(args, data):
                 'n_estimators':args.XGB_N_ESTI,
                 'reg_lambda': args.XGB_LAMBDA,
                 'learning_rate': args.LR,
+                'base_score': 7
                 }
 
     if args.XGB_TYPE == 'C':
@@ -96,25 +98,6 @@ def XGB(args, data):
     xgb.fit(X_train, y_train, eval_set = [(X_valid, y_valid)], verbose=True)
 
     return xgb
-
-def CATB(args, data):
-    X_train, X_valid, y_train, y_valid = data['X_train'], data['X_valid'], data['y_train'], data['y_valid']
-    
-    params = {'iterations': args.CATB_ITER,
-            'learning_rate':args.LR,
-            'depth': args.CATB_DEPTH
-            }
-    
-    if args.LGBM_TYPE == 'C':
-        catb = CatBoostClassifier(**params, eval_metric='rmse', random_state=args.SEED)
-        # rmse(y_test,catboost_pred_cl.squeeze(1))
-    else:
-        catb = CatBoostRegressor(**params, random_state=args.SEED)
-
-    evaluation = [(X_train, y_train),(X_valid, y_valid)]
-    catb.fit(X_train, y_train, eval_set = evaluation, verbose=1000, early_stopping_rounds=500)
-
-    return catb
 
 
 def modify_range(rating):
