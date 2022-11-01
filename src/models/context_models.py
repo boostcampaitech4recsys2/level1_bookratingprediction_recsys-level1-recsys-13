@@ -11,13 +11,6 @@ from ._models import rmse, RMSELoss
 
 import wandb
 
-wandb.config = {
-  # "learning_rate": 0.001,
-  # "epochs": 100,
-  # "batch_size": 128
-  'EMBED_DIM': 32
-}
-
 class FactorizationMachineModel:
 
     def __init__(self, args, data):
@@ -42,6 +35,7 @@ class FactorizationMachineModel:
 
         self.wandb_model_name = args.MODEL
         self.wandb_mode = args.WANDB
+
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
@@ -68,7 +62,6 @@ class FactorizationMachineModel:
 
             if self.wandb_mode:
                 wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
-
 
 
     def predict_train(self):
@@ -118,6 +111,7 @@ class FieldAwareFactorizationMachineModel:
 
         self.wandb_model_name = args.MODEL
         self.wandb_mode = args.WANDB
+
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
