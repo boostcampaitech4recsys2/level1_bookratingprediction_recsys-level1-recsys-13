@@ -24,7 +24,7 @@ def main(args):
     ######################## SET WANDB
     if args.WANDB:
         wandb.init(project="test-project", entity="ai-tech-4-recsys13")
-        wandb.run.name = 'data_mb_' + args.MODEL + '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
+        wandb.run.name =  args.MODEL #+ '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
         wandb.config = {
             "learning_rate": args.LR ,
             "epochs": args.EPOCHS,
