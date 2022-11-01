@@ -1,7 +1,11 @@
 ### Dataset
-/data/*
+/data/images
 /submit
 ?
+
+# private workspace
+/private_sj/wandb
+/private_sj/submit
 # wandb
 /wandb
 ?
