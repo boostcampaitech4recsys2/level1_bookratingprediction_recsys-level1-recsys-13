@@ -37,7 +37,7 @@ def LGBM(args, data):
     lgbm.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse', verbose=1000)
 
     trial = Trials()
-    best_hyperparams = fmin(fn = objective)
+    # best_hyperparams = fmin(fn = objective)
 
     return lgbm
     
@@ -73,7 +73,7 @@ def XGB(args, data):
                 'eval_metric':'rmse',
                 'booster':args.XGB_BOOSTER,
                 'n_estimators':args.XGB_N_ESTI,
-                'reg_lambda': args.XGBM_LAMBDA,
+                'reg_lambda': args.XGB_LAMBDA,
                 'learning_rate': args.LR,
                 'max_depth': args.XGB_MAX_DEPTH,
                 'min_child_weight': args.XGB_MIN_CHILD
@@ -83,7 +83,7 @@ def XGB(args, data):
                 'eval_metric':'rmse',
                 'booster':args.XGB_BOOSTER,
                 'n_estimators':args.XGB_N_ESTI,
-                'reg_lambda': args.XGBM_LAMBDA,
+                'reg_lambda': args.XGB_LAMBDA,
                 'learning_rate': args.LR,
                 }
 
