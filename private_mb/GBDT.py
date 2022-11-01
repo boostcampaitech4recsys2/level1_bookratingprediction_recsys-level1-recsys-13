@@ -34,7 +34,7 @@ def LGBM(args, data):
         lgbm = LGBMRegressor(**params, n_estimators=12000, early_stopping_rounds=500, random_state=args.SEED)
 
     evaluation = [(X_train, y_train),(X_valid, y_valid)]
-    lgbm.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse',verbose=1000)
+    lgbm.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse', verbose=1000)
 
     trial = Trials()
     best_hyperparams = fmin(fn = objective)
@@ -43,19 +43,21 @@ def LGBM(args, data):
 
 
 def CATB(args, data):
-    params = {'iterations': args.CATB_ITER
-            'learning_rate':args.LR
+    X_train, X_valid, y_train, y_valid = data['X_train'], data['X_valid'], data['y_train'], data['y_valid']
+    
+    params = {'iterations': args.CATB_ITER,
+            'learning_rate':args.LR,
             'depth': args.CATB_DEPTH
             }
     
     if args.LGBM_TYPE == 'C':
-        catb = CatBoostClassifier(**params, n_estimators=1500, random_state=args.SEED)
+        catb = CatBoostClassifier(**params, eval_metric='rmse', random_state=args.SEED)
         # rmse(y_test,catboost_pred_cl.squeeze(1))
     else:
         catb = CatBoostRegressor(**params, random_state=args.SEED)
 
     evaluation = [(X_train, y_train),(X_valid, y_valid)]
-    catb.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse',verbose=1000, early_stopping_rounds=500)
+    catb.fit(X_train, y_train, eval_set = evaluation, verbose=1000, early_stopping_rounds=500)
 
     return catb
 
