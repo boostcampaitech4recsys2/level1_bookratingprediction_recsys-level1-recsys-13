@@ -2,6 +2,7 @@
 /data/images
 /submit/*
 ?
+/catboost_info/*
 
 # private workspace
 /private_sj/wandb
