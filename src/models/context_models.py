@@ -9,6 +9,14 @@ import torch.optim as optim
 from ._models import _FactorizationMachineModel, _FieldAwareFactorizationMachineModel
 from ._models import rmse, RMSELoss
 
+import wandb
+
+wandb.config = {
+  # "learning_rate": 0.001,
+  # "epochs": 100,
+  # "batch_size": 128
+  'EMBED_DIM': 32
+}
 
 class FactorizationMachineModel:
 
@@ -32,6 +40,8 @@ class FactorizationMachineModel:
         self.model = _FactorizationMachineModel(self.field_dims, self.embed_dim).to(self.device)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.learning_rate, amsgrad=True, weight_decay=self.weight_decay)
 
+        self.wandb_model_name = args.MODEL
+        self.wandb_mode = args.WANDB
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
@@ -55,6 +65,9 @@ class FactorizationMachineModel:
 
             rmse_score = self.predict_train()
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
+
+            if self.wandb_mode:
+                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
 
 
 
@@ -103,6 +116,8 @@ class FieldAwareFactorizationMachineModel:
         self.model = _FieldAwareFactorizationMachineModel(self.field_dims, self.embed_dim).to(self.device)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.learning_rate, amsgrad=True, weight_decay=self.weight_decay)
 
+        self.wandb_model_name = args.MODEL
+        self.wandb_mode = args.WANDB
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
@@ -123,7 +138,11 @@ class FieldAwareFactorizationMachineModel:
                     total_loss = 0
 
             rmse_score = self.predict_train()
+            wandb.log({"rmse": rmse_score})
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
+
+            if self.wandb_mode:
+                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
 
 
     def predict_train(self):
