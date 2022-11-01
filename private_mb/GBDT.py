@@ -36,8 +36,9 @@ def LGBM(args, data):
     evaluation = [(X_train, y_train),(X_valid, y_valid)]
     lgbm.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse', verbose=1000)
 
-    trial = Trials()
-    best_hyperparams = fmin(fn = objective)
+    # hyperopt
+    # trial = Trials()
+    # best_hyperparams = fmin(fn = objective)
 
     return lgbm
 

@@ -45,7 +45,7 @@ def main(args):
         nltk.download('punkt')
         data = text_data_load(args)
     elif args.MODEL in ('LGBM','CATB'):
-        data = dl_data_load(args)   
+        data = context_data_load(args)   
     else:
         pass
 
@@ -67,7 +67,7 @@ def main(args):
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
 
-    if args.MODEL in ('LGBM', 'CATB'):
+    elif args.MODEL in ('LGBM', 'CATB'):
         data = context_data_split(args, data)
     
     else:
