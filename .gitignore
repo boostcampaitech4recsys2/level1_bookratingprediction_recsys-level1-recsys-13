@@ -2,7 +2,8 @@
 /data/images
 /submit
 ?
-#private
+
+# private workspace
 /private_sj/wandb
 /private_sj/submit
 # wandb
