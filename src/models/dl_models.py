@@ -109,7 +109,7 @@ class NeuralCollaborativeFiltering:
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
         submission['rating'] = submission['rating'].apply(predicts_map)
-        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:]}_BATHC_SIZE{self.batch_size}.csv')
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:-1]}_BATHC_SIZE{self.batch_size}.csv')
 
 
 class WideAndDeepModel:
@@ -196,7 +196,7 @@ class WideAndDeepModel:
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
         submission['rating'] = submission['rating'].apply(predicts_map)
-        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:]}_BATHC_SIZE{self.batch_size}.csv')
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:-1]}_BATHC_SIZE{self.batch_size}.csv')
 
 
 class DeepCrossNetworkModel:
@@ -286,4 +286,4 @@ class DeepCrossNetworkModel:
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
         submission['rating'] = submission['rating'].apply(predicts_map)
-        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:]}_BATHC_SIZE{self.batch_size}.csv')
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:-1]}_BATHC_SIZE{self.batch_size}.csv')
