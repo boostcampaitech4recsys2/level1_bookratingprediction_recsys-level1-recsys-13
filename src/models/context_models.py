@@ -14,6 +14,14 @@ from ._models import rmse, RMSELoss
 import wandb
 import time
 
+def predicts_map(x: float) -> float:
+    if x < 1:
+        return 1.0
+    elif x > 10:
+        return 10.0
+    else:
+        return x
+
 class FactorizationMachineModel:
 
     def __init__(self, args, data):
@@ -98,6 +106,7 @@ class FactorizationMachineModel:
                 predicts.extend(y.tolist())
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
+        submission['rating'] = submission['rating'].apply(predicts_map)
         submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path}_BATHC_SIZE{self.batch_size}.csv')
 
 
@@ -184,4 +193,5 @@ class FieldAwareFactorizationMachineModel:
                 predicts.extend(y.tolist())
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
+        submission['rating'] = submission['rating'].apply(predicts_map)
         submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path}_BATHC_SIZE{self.batch_size}.csv')

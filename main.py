@@ -18,6 +18,14 @@ import wandb
 
 from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
 
+def predicts_map(x: float) -> float:
+    if x < 1:
+        return 1.0
+    elif x > 10:
+        return 10.0
+    else:
+        return x
+
 def main(args):
     seed_everything(args.SEED)
 
@@ -132,6 +140,7 @@ def main(args):
     if args.MODEL in ('LGBM', 'CATB', 'XGB'):
         print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
         submission['rating'] = predicts
+        submission['rating'] = submission['rating'].apply(predicts_map)
         now = time.localtime()
         now_date = time.strftime('%Y%m%d', now)
         now_hour = time.strftime('%X', now)
