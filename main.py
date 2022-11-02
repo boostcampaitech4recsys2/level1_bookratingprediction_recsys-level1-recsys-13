@@ -67,10 +67,6 @@ def main(args):
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
 
-    elif args.MODEL=='DeepCoNN':
-        data = text_data_split(args, data)
-        data = text_data_loader(args, data)
-
     elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         data = context_data_split(args, data)
     
