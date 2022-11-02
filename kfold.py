@@ -135,8 +135,8 @@ def main(args):
 
         ######################## WANDB
         if args.WANDB:
-            wandb.init(project="KFOLD_Test", entity="ai-tech-4-recsys13")
-            wandb.run.name = f'K-Fold Iter {idx}: ' + args.MODEL + '_EMBDIM:' + '_BATCH_SIZE:' + str(args.BATCH_SIZE)
+            wandb.init(project="test-project", entity="ai-tech-4-recsys13")
+            wandb.run.name = f'K-Fold Iteration {idx}: {args.MODEL}_EPOCH:{args.EPOCHS}_EMBDIM{args.FFM_EMBED_DIM}_BATCH_SIZE{args.BATCH_SIZE}'
             wandb.config = {
                 "learning_rate": args.LR ,
                 "epochs": args.EPOCHS,
