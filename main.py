@@ -132,13 +132,18 @@ def main(args):
     if args.MODEL in ('LGBM', 'CATB', 'XGB'):
         print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
         submission['rating'] = predicts
+        now = time.localtime()
+        now_date = time.strftime('%Y%m%d', now)
+        now_hour = time.strftime('%X', now)
+        save_time = now_date + '_' + now_hour.replace(':', '')
+        submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
     else:
         pass
-    now = time.localtime()
-    now_date = time.strftime('%Y%m%d', now)
-    now_hour = time.strftime('%X', now)
-    save_time = now_date + '_' + now_hour.replace(':', '')
-    submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
+    # now = time.localtime()
+    # now_date = time.strftime('%Y%m%d', now)
+    # now_hour = time.strftime('%X', now)
+    # save_time = now_date + '_' + now_hour.replace(':', '')
+    # submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
 
 
 

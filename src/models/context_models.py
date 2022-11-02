@@ -12,6 +12,7 @@ from ._models import _FactorizationMachineModel, _FieldAwareFactorizationMachine
 from ._models import rmse, RMSELoss
 
 import wandb
+import time
 
 class FactorizationMachineModel:
 
@@ -97,7 +98,7 @@ class FactorizationMachineModel:
                 predicts.extend(y.tolist())
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
-        submission.to_csv('submit/{}_EPOCHS_{}_EMBED_DIM{}_BATHC_SIZE{}.csv'.format(self.wandb_model_name, self.epochs, self.embed_dim, self.batch_size))
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path}_BATHC_SIZE{self.batch_size}.csv')
 
 
 
@@ -183,5 +184,4 @@ class FieldAwareFactorizationMachineModel:
                 predicts.extend(y.tolist())
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
-        submission.to_csv('submit/{}_EPOCHS_{}_EMBED_DIM{}_BATHC_SIZE{}.csv'.format(self.wandb_model_name, self.epochs, self.embed_dim, self.batch_size))
-
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path}_BATHC_SIZE{self.batch_size}.csv')
