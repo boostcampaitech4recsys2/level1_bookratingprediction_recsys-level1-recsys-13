@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
+from private_mb import LGBM, CATB, XGB, rmse
 
 def main(args):
     seed_everything(args.SEED)
@@ -62,10 +62,6 @@ def main(args):
     elif args.MODEL=='CNN_FM':
         data = image_data_split(args, data)
         data = image_data_loader(args, data)
-
-    elif args.MODEL=='DeepCoNN':
-        data = text_data_split(args, data)
-        data = text_data_loader(args, data)
 
     elif args.MODEL=='DeepCoNN':
         data = text_data_split(args, data)
@@ -202,17 +198,35 @@ if __name__ == "__main__":
     arg('--DEEPCONN_WORD_DIM', type=int, default=768, help='DEEP_CONN에서 1D conv의 입력 크기를 조정할 수 있습니다.')
     arg('--DEEPCONN_OUT_DIM', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
 
+    ############### GBDT (공통)
+    arg('--TYPE', type=str, default='R', help='Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
+    arg('--LR_RANGE', nargs='+',default='0.05,0.31,0.05',
+        type=lambda s: [float(item) for item in s.split(',')],
+        help='Learning Rate를 np.arange 형식에 맞춰 넣을 수 있습니다.')
+    arg('--MAX_DEPTH', nargs='+',default='5,16,1',
+        type=lambda s: [float(item) for item in s.split(',')],
+        help='트리의 최대 길이를 np.arange 형식에 맞춰 넣을 수 있습니다.')
+    arg('--N_EST', type=int, default=500, help='학습에 활용될 weak learner의 반복 수를 조정할 수 있습니다.')
+    arg('--LAMBDA', type=int, default=0.1, help='regularization 정규화 값을 조정할 범위로 조정할 수 있습니다.')
+
+    
+
     ############### LGBM
-    arg('--LGBM_TYPE', type=str, default='R', help='LGBM Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
     arg('--LGBM_ALG', type=str, default='gbdt', help='LGBM에서 실행시킬 알고리즘을 정의할 수 있습니다.')
-    arg('--LGBM_LAMBDA', type=int, default=0.1, help='LGBM에서 regularization 정규화 값을 조정할 수 있습니다.')
-    arg('--LGBM_MAX_DEPTH', type=int, default=10, help='LGBM에서 트리의 최대 깊이를 조정할 수 있습니다.')
+    arg('--LGBM_MIN_CHILD_W', nargs='+',default='1,8,1',
+        type=lambda s: [float(item) for item in s.split(',')],
+        help='트리의 최대 길이를 np.arange 형식에 맞춰 넣을 수 있습니다.')
     arg('--LGBM_NUM_LEAVES', type=int, default=500, help='LGBM에서 전체 Tree의 leaves 수를 조정할 수 있습니다.')
 
     ############### CATB
-    arg('--CATB_TYPE', type=str, default='R', help='CATB Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
     arg('--CATB_ITER', type=int, default=10000, help='same as n_estiamtors')
-    arg('--CATB_DEPTH', type=int, default=10, help='Depth of the tree')
+    arg('--CATB_DEPTH', nargs='+',default='5,16,1',
+        type=lambda s: [float(item) for item in s.split(',')],
+        help='Depth of the tree 를 np.arange 형식에 맞춰 넣을 수 있습니다.')
+    arg('--CATB_COLS', nargs='+',default='0.3,0.8,0.1',
+        type=lambda s: [float(item) for item in s.split(',')],
+        help='colsample_bylevel 를 np.arange 형식에 맞춰 넣을 수 있습니다.')    
+
 
     ############### XGB
     arg('--XGB_TYPE', type=str, default='R', help='LGBM Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
