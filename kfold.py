@@ -61,7 +61,7 @@ def main(args):
             data = context_data_loader(args, data) # context_data_loader와 dl_data_loader는 동일한 함수
             data_list.append(data)
 
-    # elif args.MODEL in ('CNN_FM'):
+    elif args.MODEL in ('CNN_FM'): # CNN_FM 모델에 대한 데이터 전처리가 되어있지 않습니다.
     #     X_data = np.array(data['img_train'][['user_id', 'isbn', 'img_vector']])
     #     y_data = np.array(data['img_train']['rating'])
     #     for train_idx, test_idx in kf.split(X_data):
@@ -73,8 +73,9 @@ def main(args):
     #         data['y_valid'] = pd.DataFrame(y_valid).squeeze()
     #         data = image_data_loader(args, data)
     #         data_list.append(data)
+        pass
 
-    # elif args.MODEL in ('DeepCoNN'):
+    elif args.MODEL in ('DeepCoNN'): # DeepCoNN 모델에 대한 데이터 전처리가 되어있지 않습니다.
     #     X_data = np.array(data['text_train'][['user_id', 'isbn', 'user_summary_merge_vector', 'item_summary_vector']])
     #     y_data = np.array(data['text_train']['rating'])
     #     for train_idx, test_idx in kf.split(X_data):
@@ -86,6 +87,7 @@ def main(args):
     #         data['y_valid'] = pd.DataFrame(y_valid).squeeze()
     #         data = text_data_loader(args, data)
     #         data_list.append(data)
+        pass
 
     elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         X_data = np.array(data['train'].drop(['rating'], axis=1))
