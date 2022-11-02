@@ -1,6 +1,7 @@
 import time
 import argparse
 import pandas as pd
+import numpy as np
 
 from src import seed_everything
 
@@ -18,19 +19,10 @@ import wandb
 
 from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
 
+from sklearn.model_selection import KFold
+
 def main(args):
     seed_everything(args.SEED)
-
-    ######################## SET WANDB
-    if args.WANDB:
-        wandb.init(project="test-project", entity="ai-tech-4-recsys13")
-        wandb.run.name = 'data_mb_' + args.MODEL + '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
-        wandb.config = {
-            "learning_rate": args.LR ,
-            "epochs": args.EPOCHS,
-            "batch_size": args.BATCH_SIZE,
-            "architecture": args.MODEL,
-        }
 
     ######################## DATA LOAD
     print(f'--------------- {args.MODEL} Load Data ---------------')
@@ -49,91 +41,135 @@ def main(args):
     else:
         pass
 
+    ######################## SET KFOLD
+    kf = KFold(n_splits=5, shuffle=True, random_state=args.SEED)
+    data_list = []
+    predicts_list = []
+
     ######################## Train/Valid Split
     print(f'--------------- {args.MODEL} Train/Valid Split ---------------')
-    if args.MODEL in ('FM', 'FFM'):
-        data = context_data_split(args, data)
-        data = context_data_loader(args, data)
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
+        X_data = np.array(data['train'].drop(['rating'], axis=1))
+        y_data = np.array(data['train']['rating'])
+        for train_idx, test_idx in kf.split(X_data):
+            X_train, X_valid = X_data[train_idx], X_data[test_idx]
+            y_train, y_valid = y_data[train_idx], y_data[test_idx]
+            data['X_train'] = pd.DataFrame(X_train) 
+            data['X_valid'] = pd.DataFrame(X_valid)
+            data['y_train'] = pd.DataFrame(y_train)
+            data['y_valid'] = pd.DataFrame(y_valid)
+            data = context_data_loader(args, data) # context_data_loader와 dl_data_loader는 동일한 함수
+            data_list.append(data)
 
-    elif args.MODEL in ('NCF', 'WDN', 'DCN'):
-        data = dl_data_split(args, data)
-        data = dl_data_loader(args, data)
+    elif args.MODEL in ('CNN_FM'):
+        X_data = data['img_train'][['user_id', 'isbn', 'img_vector']]
+        y_data = data['img_train']['rating']
+        for train_idx, test_idx in kf.split(X_data):
+            X_train, X_valid = X_data[train_idx], X_data[test_idx]
+            y_train, y_valid = y_data[train_idx], y_data[test_idx]
+            data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
+            data = image_data_loader(args, data)
+            data_list.append(data)
 
-    elif args.MODEL=='CNN_FM':
-        data = image_data_split(args, data)
-        data = image_data_loader(args, data)
-
-    elif args.MODEL=='DeepCoNN':
-        data = text_data_split(args, data)
-        data = text_data_loader(args, data)
-
-    elif args.MODEL=='DeepCoNN':
-        data = text_data_split(args, data)
-        data = text_data_loader(args, data)
+    elif args.MODEL in ('DeepCoNN'):
+        X_data = data['text_train'][['user_id', 'isbn', 'user_summary_merge_vector', 'item_summary_vector']]
+        y_data = data['text_train']['rating']
+        for train_idx, test_idx in kf.split(X_data):
+            X_train, X_valid = X_data[train_idx], X_data[test_idx]
+            y_train, y_valid = y_data[train_idx], y_data[test_idx]
+            data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
+            data = text_data_loader(args, data)
+            data_list.append(data)
 
     elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        data = context_data_split(args, data)
-    
+        X_data = data['train'].drop(['rating'], axis=1)
+        y_data = data['train']['rating']
+        for train_idx, test_idx in kf.split(X_data):
+            X_train, X_valid = X_data[train_idx], X_data[test_idx]
+            y_train, y_valid = y_data[train_idx], y_data[test_idx]
+            data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
+            data_list.append(data)
+
     else:
         pass
 
-    ######################## Model
-    print(f'--------------- INIT {args.MODEL} ---------------')
-    if args.MODEL=='FM':
-        model = FactorizationMachineModel(args, data)
-    elif args.MODEL=='FFM':
-        model = FieldAwareFactorizationMachineModel(args, data)
-    elif args.MODEL=='NCF':
-        model = NeuralCollaborativeFiltering(args, data)
-    elif args.MODEL=='WDN':
-        model = WideAndDeepModel(args, data)
-    elif args.MODEL=='DCN':
-        model = DeepCrossNetworkModel(args, data)
-    elif args.MODEL=='CNN_FM':
-        model = CNN_FM(args, data)
-    elif args.MODEL=='DeepCoNN':
-        model = DeepCoNN(args, data)
-    elif args.MODEL=='LGBM':
-        model = LGBM(args, data)
-    elif args.MODEL=='CATB':
-        model = CATB(args, data)
-    elif args.MODEL=='XGB':
-        model = XGB(args, data)
-    else:
-        pass
+    ######################## MODEL, WANDB, TRAIN, INFERENCE
+    for idx in range(5):
+        print(f'--------------- Iteration {idx} ---------------')
 
-    ######################## TRAIN
-    print(f'--------------- {args.MODEL} TRAINING ---------------')
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        pass
-    else:
-        model.train()
-    
-    if args.WANDB:
-        wandb.finish()
+        ######################## MODEL
+        print(f'--------------- INIT {args.MODEL} ---------------')
+        if args.MODEL=='FM':
+            model = FactorizationMachineModel(args, data_list[idx])
+        elif args.MODEL=='FFM':
+            model = FieldAwareFactorizationMachineModel(args, data_list[idx])
+        elif args.MODEL=='NCF':
+            model = NeuralCollaborativeFiltering(args, data_list[idx])
+        elif args.MODEL=='WDN':
+            model = WideAndDeepModel(args, data_list[idx])
+        elif args.MODEL=='DCN':
+            model = DeepCrossNetworkModel(args, data_list[idx])
+        elif args.MODEL=='CNN_FM':
+            model = CNN_FM(args, data_list[idx])
+        elif args.MODEL=='DeepCoNN':
+            model = DeepCoNN(args, data_list[idx])
+        elif args.MODEL=='LGBM':
+            model = LGBM(args, data_list[idx])
+        elif args.MODEL=='CATB':
+            model = CATB(args, data_list[idx])
+        elif args.MODEL=='XGB':
+            model = XGB(args, data_list[idx])
+        else:
+            pass
 
-    ######################## INFERENCE
-    
-    #if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
-    #    predicts = model.predict(data['test_dataloader'])
-    #elif args.MODEL=='CNN_FM':
-    #    predicts  = model.predict(data['test_dataloader'])
-    #elif args.MODEL=='DeepCoNN':
-    #    predicts  = model.predict(data['test_dataloader'])
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
+        ######################## WANDB
+        if args.WANDB:
+            wandb.init(project="test-project", entity="ai-tech-4-recsys13")
+            wandb.run.name = f'K-Fold Iteration {idx}: ' + args.MODEL + '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' 
+            + str(args.FFM_EMBED_DIM) + '_BATCH_SIZE:' + str(args.BATCH_SIZE)
+            wandb.config = {
+                "learning_rate": args.LR ,
+                "epochs": args.EPOCHS,
+                "batch_size": args.BATCH_SIZE,
+                "architecture": args.MODEL,
+            }
+
+        ######################## TRAIN
+        print(f'--------------- {args.MODEL} TRAINING ---------------')
+        if args.MODEL in ('LGBM', 'CATB', 'XGB'):
+            pass
+        else:
+            model.train()
+        
+        if args.WANDB:
+            wandb.finish()
+
+        ######################## INFERENCE
         print(f'--------------- {args.MODEL} PREDICT ---------------')
-        predicts  = model.predict(data['test'])
-        # print('RMSE(LGBM):', rmse(data['test'], predicts))
+        if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
+            predicts = model.predict(data['test_dataloader'])
+        elif args.MODEL=='CNN_FM':
+            predicts  = model.predict(data['test_dataloader'])
+        elif args.MODEL=='DeepCoNN':
+            predicts  = model.predict(data['test_dataloader'])
+        elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
+            predicts  = model.predict(data['test'])
+            # print('RMSE(LGBM):', rmse(data['test'], predicts))
+        else:
+            pass
+
+        predicts_list.append(predicts)
+
+    mean_predicts = sum(predicts_list) / len(predicts_list)
+    
+    ######################## SAVE PREDICT
+    print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
+    submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'):
+        submission['rating'] = mean_predicts
     else:
         pass
 
-    ######################## SAVE PREDICT
-    submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
-        submission['rating'] = predicts
-    else:
-        pass
     now = time.localtime()
     now_date = time.strftime('%Y%m%d', now)
     now_hour = time.strftime('%X', now)

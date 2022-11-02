@@ -113,27 +113,27 @@ def main(args):
         wandb.finish()
 
     ######################## INFERENCE
-    
-    #if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
-    #    predicts = model.predict(data['test_dataloader'])
-    #elif args.MODEL=='CNN_FM':
-    #    predicts  = model.predict(data['test_dataloader'])
-    #elif args.MODEL=='DeepCoNN':
-    #    predicts  = model.predict(data['test_dataloader'])
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        print(f'--------------- {args.MODEL} PREDICT ---------------')
+    print(f'--------------- {args.MODEL} PREDICT ---------------')
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
+        predicts = model.predict(data['test_dataloader'])
+    elif args.MODEL=='CNN_FM':
+        predicts  = model.predict(data['test_dataloader'])
+    elif args.MODEL=='DeepCoNN':
+        predicts  = model.predict(data['test_dataloader'])
+    elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         predicts  = model.predict(data['test'])
         # print('RMSE(LGBM):', rmse(data['test'], predicts))
     else:
         pass
-
+    
     ######################## SAVE PREDICT
+    print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
     submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'):
         submission['rating'] = predicts
     else:
         pass
+
     now = time.localtime()
     now_date = time.strftime('%Y%m%d', now)
     now_hour = time.strftime('%X', now)
@@ -156,6 +156,7 @@ if __name__ == "__main__":
     arg('--TEST_SIZE', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
     arg('--SEED', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--WANDB', type=bool, default=False, help='wandb 기록 여부를 선택할 수 있습니다.')
+    arg('--EXP_DIR', type=str, default='models/', help='모델을 저장할 위치를 선택할 수 있습니다.')
     
 
     ############### TRAINING OPTION

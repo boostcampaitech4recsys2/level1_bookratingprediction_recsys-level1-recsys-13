@@ -7,6 +7,10 @@
 /private_sj/wandb
 /private_sj/submit
 /private_sj/catboost_info/*
+/private_sd/wandb
+/private_sd/submit
+/private_sd/models
+/private_sd/data
 ?
 # wandb
 /wandb
