@@ -112,14 +112,13 @@ def all_params(args):
         'objective':'reg:squarederror',
         'n_estimators':args.N_EST,
         'booster':args.XGB_BOOSTER,
-        'min_child_weight':     hp.choice('min_child_weight', np.arange(*args.MIN_CHILD_W,dtype=int)),
         'reg_lambda':           hp.uniform('reg_lambda', *args.XGB_LAMBDA),
-        'learning_rate':        hp.choice('learning_rate', np.arange(*args.LR_RANGE))
+        'learning_rate':        hp.loguniform('learning_rate', np.log(0.05), np.log(0.3))
         } #args.XGB_BOOSTER == 'gblinear
 
     if args.XGB_BOOSTER == 'gbtree':
-        xgb_reg_params['max_depth'] = hp.choice('max_depth', np.arange(*args.MAX_DEPTH, dtype=int))
-        xgb_reg_params['min_child_weight'] = hp.choice('min_child_weight', np.arange(*args.MIN_CHILD_W, dtype=int))
+        xgb_reg_params['max_depth'] = hp.choice('max_depth', np.arange(*args.MAX_DEPTH))
+        xgb_reg_params['min_child_weight'] = hp.choice('min_child_weight', np.arange(*args.MIN_CHILD_W))
 
     xgb_fit_params = {
         'eval_metric': 'rmse',
@@ -133,10 +132,10 @@ def all_params(args):
     # LightGBM parameters
     lgb_reg_params = {
         'n_estimators':     args.N_EST,
-        'learning_rate':    hp.choice('learning_rate', np.arange(*args.LR_RANGE)),
-        'max_depth':        hp.choice('max_depth',        np.arange(*args.MAX_DEPTH, dtype=int)),
-        'min_child_weight': hp.choice('min_child_weight', np.arange(*args.MIN_CHILD_W, dtype=int)),
-        'colsample_bytree': hp.choice('colsample_bytree', np.arange(*args.COLS)),
+        'learning_rate':    hp.loguniform('learning_rate', np.log(0.05), np.log(0.3)),
+        'max_depth':        hp.choice('max_depth',        np.arange(*args.MAX_DEPTH)),
+        'min_child_weight': hp.choice('min_child_weight', np.arange(*args.MIN_CHILD_W)),
+        'colsample_bytree': hp.uniform('colsample_bytree', 0.1, 0.5),
         'subsample':        hp.uniform('subsample', 0.8, 1),
         'reg_lambda':       hp.uniform('reg_lambda', *args.LGBM_LAMBDA)
     }
@@ -153,9 +152,9 @@ def all_params(args):
     ctb_reg_params = {
         'n_estimators': args.N_EST,
         'eval_metric': 'RMSE',
-        'learning_rate':     hp.choice('learning_rate', np.arange(*args.LR_RANGE)),
-        'max_depth':         hp.choice('max_depth', np.arange(*args.MAX_DEPTH, dtype=int)),
-        'colsample_bylevel': hp.choice('colsample_bylevel', np.arange(*args.COLS))
+        'learning_rate':     hp.loguniform('learning_rate', np.log(0.05), np.log(0.3)),
+        'max_depth':         hp.choice('max_depth', np.arange(*args.MAX_DEPTH)),
+        'colsample_bylevel': hp.uniform('colsample_bylevel', 0.1, 0.5)
         }
     ctb_fit_params = {
         'early_stopping_rounds': 100,
@@ -188,7 +187,7 @@ class HPOpt:
             space_dict = self.ctb_para 
             
         try:
-            result = fmin(fn=fn, space=space_dict, algo=tpe.suggest, max_evals=50, trials=Trials())
+            result = fmin(fn=fn, space=space_dict, algo=tpe.suggest, max_evals=100, trials=Trials())
         except Exception as e:
             return {'status': STATUS_FAIL,
                     'exception': str(e)}

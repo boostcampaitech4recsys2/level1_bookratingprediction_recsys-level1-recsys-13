@@ -209,17 +209,17 @@ if __name__ == "__main__":
     arg('--TYPE', type=str, default='R', help='Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
     arg('--N_EST', type=int, default=500, help='학습에 활용될 weak learner의 반복 수를 조정할 수 있습니다.')
 
-    arg('--LR_RANGE', nargs='+',default='0.05,0.31,0.05',
+    arg('--LR_RANGE', nargs='+',default='0.05,0.3',
         type=lambda s: [float(item) for item in s.split(',')],
         help='Learning Rate를 np.arange 형식에 맞춰 넣을 수 있습니다.')
     arg('--MAX_DEPTH', nargs='+',default='5,16,1',
-        type=lambda s: [float(item) for item in s.split(',')],
+        type=lambda s: [int(item) for item in s.split(',')],
         help='트리의 최대 길이를 np.arange 형식에 맞춰 넣을 수 있습니다.')
-    arg('--COLS', nargs='+',default='0.3,0.8,0.1',
+    arg('--COLS', nargs='+',default='0.3,0.8',
         type=lambda s: [float(item) for item in s.split(',')],
         help='colsample_bylevel 를 np.arange 형식에 맞춰 넣을 수 있습니다.')    
     arg('--MIN_CHILD_W', nargs='+',default='1,8,1',
-        type=lambda s: [float(item) for item in s.split(',')],
+        type=lambda s: [int(item) for item in s.split(',')],
         help='min_child_weight를 np.arange 형식에 맞춰 넣을 수 있습니다.')
     
     ############### XGB
