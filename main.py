@@ -113,32 +113,32 @@ def main(args):
         wandb.finish()
 
     ######################## INFERENCE
-    print(f'--------------- {args.MODEL} PREDICT ---------------')
-    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
-        predicts = model.predict(data['test_dataloader'])
-    elif args.MODEL=='CNN_FM':
-        predicts  = model.predict(data['test_dataloader'])
-    elif args.MODEL=='DeepCoNN':
-        predicts  = model.predict(data['test_dataloader'])
-    elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        predicts  = model.predict(data['test'])
-        # print('RMSE(LGBM):', rmse(data['test'], predicts))
-    else:
-        pass
+    #print(f'--------------- {args.MODEL} PREDICT ---------------')
+    #if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
+    #    predicts = model.predict(data['test_dataloader'])
+    #elif args.MODEL=='CNN_FM':
+    #    predicts  = model.predict(data['test_dataloader'])
+    #elif args.MODEL=='DeepCoNN':
+    #    predicts  = model.predict(data['test_dataloader'])
+    #elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
+    #    predicts  = model.predict(data['test'])
+    #    # print('RMSE(LGBM):', rmse(data['test'], predicts))
+    #else:
+    #    pass
     
     ######################## SAVE PREDICT
-    print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
-    submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
-    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'):
-        submission['rating'] = predicts
-    else:
-        pass
+    #print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
+    #submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
+    #if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'):
+    #    submission['rating'] = predicts
+    #else:
+    #    pass
 
-    now = time.localtime()
-    now_date = time.strftime('%Y%m%d', now)
-    now_hour = time.strftime('%X', now)
-    save_time = now_date + '_' + now_hour.replace(':', '')
-    submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
+    #now = time.localtime()
+    #now_date = time.strftime('%Y%m%d', now)
+    #now_hour = time.strftime('%X', now)
+    #save_time = now_date + '_' + now_hour.replace(':', '')
+    #submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
 
 
 

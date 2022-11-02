@@ -156,6 +156,7 @@ if __name__ == "__main__":
     arg('--TEST_SIZE', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
     arg('--SEED', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--WANDB', type=bool, default=False, help='wandb 기록 여부를 선택할 수 있습니다.')
+    arg('--EXP_DIR', type=str, default='models/', help='모델을 저장할 위치를 선택할 수 있습니다.')
     
 
     ############### TRAINING OPTION
