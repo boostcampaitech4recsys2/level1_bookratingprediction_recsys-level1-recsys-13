@@ -42,7 +42,7 @@ def main(args):
         pass
 
     ######################## SET KFOLD
-    kf = KFold(n_splits=5, shuffle=True, random_state=args.SEED)
+    kf = KFold(n_splits=args.K_VALUE, shuffle=True, random_state=args.SEED)
     data_list = []
     predicts_list = []
 
@@ -54,48 +54,57 @@ def main(args):
         for train_idx, test_idx in kf.split(X_data):
             X_train, X_valid = X_data[train_idx], X_data[test_idx]
             y_train, y_valid = y_data[train_idx], y_data[test_idx]
-            data['X_train'] = pd.DataFrame(X_train) 
+            data['X_train'] = pd.DataFrame(X_train)
             data['X_valid'] = pd.DataFrame(X_valid)
-            data['y_train'] = pd.DataFrame(y_train)
-            data['y_valid'] = pd.DataFrame(y_valid)
+            data['y_train'] = pd.DataFrame(y_train).squeeze()
+            data['y_valid'] = pd.DataFrame(y_valid).squeeze()
             data = context_data_loader(args, data) # context_data_loader와 dl_data_loader는 동일한 함수
             data_list.append(data)
 
-    elif args.MODEL in ('CNN_FM'):
-        X_data = data['img_train'][['user_id', 'isbn', 'img_vector']]
-        y_data = data['img_train']['rating']
-        for train_idx, test_idx in kf.split(X_data):
-            X_train, X_valid = X_data[train_idx], X_data[test_idx]
-            y_train, y_valid = y_data[train_idx], y_data[test_idx]
-            data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
-            data = image_data_loader(args, data)
-            data_list.append(data)
+    # elif args.MODEL in ('CNN_FM'):
+    #     X_data = np.array(data['img_train'][['user_id', 'isbn', 'img_vector']])
+    #     y_data = np.array(data['img_train']['rating'])
+    #     for train_idx, test_idx in kf.split(X_data):
+    #         X_train, X_valid = X_data[train_idx], X_data[test_idx]
+    #         y_train, y_valid = y_data[train_idx], y_data[test_idx]
+    #         data['X_train'] = pd.DataFrame(X_train)
+    #         data['X_valid'] = pd.DataFrame(X_valid)
+    #         data['y_train'] = pd.DataFrame(y_train).squeeze()
+    #         data['y_valid'] = pd.DataFrame(y_valid).squeeze()
+    #         data = image_data_loader(args, data)
+    #         data_list.append(data)
 
-    elif args.MODEL in ('DeepCoNN'):
-        X_data = data['text_train'][['user_id', 'isbn', 'user_summary_merge_vector', 'item_summary_vector']]
-        y_data = data['text_train']['rating']
-        for train_idx, test_idx in kf.split(X_data):
-            X_train, X_valid = X_data[train_idx], X_data[test_idx]
-            y_train, y_valid = y_data[train_idx], y_data[test_idx]
-            data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
-            data = text_data_loader(args, data)
-            data_list.append(data)
+    # elif args.MODEL in ('DeepCoNN'):
+    #     X_data = np.array(data['text_train'][['user_id', 'isbn', 'user_summary_merge_vector', 'item_summary_vector']])
+    #     y_data = np.array(data['text_train']['rating'])
+    #     for train_idx, test_idx in kf.split(X_data):
+    #         X_train, X_valid = X_data[train_idx], X_data[test_idx]
+    #         y_train, y_valid = y_data[train_idx], y_data[test_idx]
+    #         data['X_train'] = pd.DataFrame(X_train)
+    #         data['X_valid'] = pd.DataFrame(X_valid)
+    #         data['y_train'] = pd.DataFrame(y_train).squeeze()
+    #         data['y_valid'] = pd.DataFrame(y_valid).squeeze()
+    #         data = text_data_loader(args, data)
+    #         data_list.append(data)
 
     elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        X_data = data['train'].drop(['rating'], axis=1)
-        y_data = data['train']['rating']
+        X_data = np.array(data['train'].drop(['rating'], axis=1))
+        y_data = np.array(data['train']['rating'])
         for train_idx, test_idx in kf.split(X_data):
             X_train, X_valid = X_data[train_idx], X_data[test_idx]
             y_train, y_valid = y_data[train_idx], y_data[test_idx]
-            data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
+            data['X_train'] = pd.DataFrame(X_train)
+            data['X_valid'] = pd.DataFrame(X_valid)
+            data['y_train'] = pd.DataFrame(y_train).squeeze()
+            data['y_valid'] = pd.DataFrame(y_valid).squeeze()
             data_list.append(data)
 
     else:
         pass
 
     ######################## MODEL, WANDB, TRAIN, INFERENCE
-    for idx in range(5):
-        print(f'--------------- Iteration {idx} ---------------')
+    for idx in range(args.K_VALUE):
+        print(f'\n--------------- Iteration {idx} ---------------')
 
         ######################## MODEL
         print(f'--------------- INIT {args.MODEL} ---------------')
@@ -124,9 +133,8 @@ def main(args):
 
         ######################## WANDB
         if args.WANDB:
-            wandb.init(project="test-project", entity="ai-tech-4-recsys13")
-            wandb.run.name = f'K-Fold Iteration {idx}: ' + args.MODEL + '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' 
-            + str(args.FFM_EMBED_DIM) + '_BATCH_SIZE:' + str(args.BATCH_SIZE)
+            wandb.init(project="KFOLD_Test", entity="ai-tech-4-recsys13")
+            wandb.run.name = f'K-Fold Iter {idx}: ' + args.MODEL + '_EMBDIM:' + '_BATCH_SIZE:' + str(args.BATCH_SIZE)
             wandb.config = {
                 "learning_rate": args.LR ,
                 "epochs": args.EPOCHS,
@@ -158,7 +166,7 @@ def main(args):
         else:
             pass
 
-        predicts_list.append(predicts)
+        predicts_list.append(np.array(predicts))
 
     mean_predicts = sum(predicts_list) / len(predicts_list)
     
@@ -192,7 +200,7 @@ if __name__ == "__main__":
     arg('--TEST_SIZE', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
     arg('--SEED', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--WANDB', type=bool, default=False, help='wandb 기록 여부를 선택할 수 있습니다.')
-    
+    arg('--K_VALUE', type=int, default=5, help='K-Fold의 K value 값을 조정할 수 있습니다.')
 
     ############### TRAINING OPTION
     arg('--BATCH_SIZE', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')

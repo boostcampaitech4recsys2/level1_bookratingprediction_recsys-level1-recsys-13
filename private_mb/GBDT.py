@@ -28,16 +28,13 @@ def LGBM(args, data):
             }
 
     if args.LGBM_TYPE == 'C':
-        lgbm = LGBMClassifier(**params, n_estimators=1500, early_stopping_rounds=100, random_state=args.SEED)
+        lgbm = LGBMClassifier(**params, n_estimators=1500, random_state=args.SEED)
         # rmse(y_test,catboost_pred_cl.squeeze(1))
     else:
-        lgbm = LGBMRegressor(**params, n_estimators=12000, early_stopping_rounds=500, random_state=args.SEED)
+        lgbm = LGBMRegressor(**params, n_estimators=12000, random_state=args.SEED)
 
     evaluation = [(X_train, y_train),(X_valid, y_valid)]
-    lgbm.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse', verbose=1000)
-
-    trial = Trials()
-    # best_hyperparams = fmin(fn = objective)
+    lgbm.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse', early_stopping_rounds=100, verbose=False)
 
     return lgbm
     
