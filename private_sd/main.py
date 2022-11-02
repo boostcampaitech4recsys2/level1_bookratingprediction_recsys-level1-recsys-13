@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import HPOpt, XGB, LGBM, CATB, rmse
+from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
 
 def main(args):
     seed_everything(args.SEED)
@@ -67,10 +67,13 @@ def main(args):
         data = text_data_split(args, data)
         data = text_data_loader(args, data)
 
-    elif args.MODEL in ('XGB', 'LGBM', 'CATB'):
-        data = context_data_split(args, data)
-        hpopt = HPOpt(args, data)
+    elif args.MODEL=='DeepCoNN':
+        data = text_data_split(args, data)
+        data = text_data_loader(args, data)
 
+    elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
+        data = context_data_split(args, data)
+    
     else:
         pass
 
@@ -90,18 +93,12 @@ def main(args):
         model = CNN_FM(args, data)
     elif args.MODEL=='DeepCoNN':
         model = DeepCoNN(args, data)
-    elif args.MODEL=='XGB':
-        xgb_opt_param = hpopt.process(fn_name='xgb_reg', space='xgb')
-        model = XGB(args, data, xgb_opt_param)
-        print(xgb_opt_param)
     elif args.MODEL=='LGBM':
-        lgb_opt_param = hpopt.process(fn_name='lgb_reg', space='lgb')
-        model = LGBM(args, data, lgb_opt_param)
-        print(lgb_opt_param)
+        model = LGBM(args, data)
     elif args.MODEL=='CATB':
-        ctb_opt_param = hpopt.process(fn_name='ctb_reg', space='ctb')
-        model = CATB(args, data, ctb_opt_param)
-        print(ctb_opt_param)
+        model = CATB(args, data)
+    elif args.MODEL=='XGB':
+        model = XGB(args, data)
     else:
         pass
 
@@ -116,27 +113,27 @@ def main(args):
         wandb.finish()
 
     ######################## INFERENCE
-    
-    #if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
-    #    predicts = model.predict(data['test_dataloader'])
-    #elif args.MODEL=='CNN_FM':
-    #    predicts  = model.predict(data['test_dataloader'])
-    #elif args.MODEL=='DeepCoNN':
-    #    predicts  = model.predict(data['test_dataloader'])
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        print(f'--------------- {args.MODEL} PREDICT ---------------')
+    print(f'--------------- {args.MODEL} PREDICT ---------------')
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
+        predicts = model.predict(data['test_dataloader'])
+    elif args.MODEL=='CNN_FM':
+        predicts  = model.predict(data['test_dataloader'])
+    elif args.MODEL=='DeepCoNN':
+        predicts  = model.predict(data['test_dataloader'])
+    elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         predicts  = model.predict(data['test'])
         # print('RMSE(LGBM):', rmse(data['test'], predicts))
     else:
         pass
-
+    
     ######################## SAVE PREDICT
+    print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
     submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'):
         submission['rating'] = predicts
     else:
         pass
+
     now = time.localtime()
     now_date = time.strftime('%Y%m%d', now)
     now_hour = time.strftime('%X', now)
@@ -152,13 +149,14 @@ if __name__ == "__main__":
     arg = parser.add_argument
 
     ############### BASIC OPTION
-    arg('--DATA_PATH', type=str, default='data/FFM_data/', help='Data path를 설정할 수 있습니다.')
+    arg('--DATA_PATH', type=str, default='data/', help='Data path를 설정할 수 있습니다.')
     arg('--MODEL', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--DATA_SHUFFLE', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--TEST_SIZE', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
     arg('--SEED', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--WANDB', type=bool, default=False, help='wandb 기록 여부를 선택할 수 있습니다.')
+    arg('--EXP_DIR', type=str, default='models/', help='모델을 저장할 위치를 선택할 수 있습니다.')
     
 
     ############### TRAINING OPTION
@@ -205,35 +203,25 @@ if __name__ == "__main__":
     arg('--DEEPCONN_WORD_DIM', type=int, default=768, help='DEEP_CONN에서 1D conv의 입력 크기를 조정할 수 있습니다.')
     arg('--DEEPCONN_OUT_DIM', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
 
-    ############### GBDT (공통)
-    arg('--TYPE', type=str, default='R', help='Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
-    arg('--N_EST', type=int, default=500, help='학습에 활용될 weak learner의 반복 수를 조정할 수 있습니다.')
-
-    arg('--LR_RANGE', nargs='+',default='0.05,0.31,0.05',
-        type=lambda s: [float(item) for item in s.split(',')],
-        help='Learning Rate를 np.arange 형식에 맞춰 넣을 수 있습니다.')
-    arg('--MAX_DEPTH', nargs='+',default='5,16,1',
-        type=lambda s: [float(item) for item in s.split(',')],
-        help='트리의 최대 길이를 np.arange 형식에 맞춰 넣을 수 있습니다.')
-    arg('--COLS', nargs='+',default='0.3,0.8,0.1',
-        type=lambda s: [float(item) for item in s.split(',')],
-        help='colsample_bylevel 를 np.arange 형식에 맞춰 넣을 수 있습니다.')    
-    arg('--MIN_CHILD_W', nargs='+',default='1,8,1',
-        type=lambda s: [float(item) for item in s.split(',')],
-        help='min_child_weight를 np.arange 형식에 맞춰 넣을 수 있습니다.')
-    
-    ############### XGB
-    arg('--XGB_BOOSTER', type=str, default='gbtree', help='XGB에서 실행시킬 알고리즘(gbtree, gblinear)을 정의할 수 있습니다.')
-    arg('--XGB_LAMBDA', nargs='+',default='0,1',
-        type=lambda s: [float(item) for item in s.split(',')],
-        help='regularization 정규화 값을 조정할 범위로 조정할 수 있습니다.')
-
     ############### LGBM
+    arg('--LGBM_TYPE', type=str, default='R', help='LGBM Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
     arg('--LGBM_ALG', type=str, default='gbdt', help='LGBM에서 실행시킬 알고리즘을 정의할 수 있습니다.')
+    arg('--LGBM_LAMBDA', type=int, default=0.1, help='LGBM에서 regularization 정규화 값을 조정할 수 있습니다.')
+    arg('--LGBM_MAX_DEPTH', type=int, default=10, help='LGBM에서 트리의 최대 깊이를 조정할 수 있습니다.')
     arg('--LGBM_NUM_LEAVES', type=int, default=500, help='LGBM에서 전체 Tree의 leaves 수를 조정할 수 있습니다.')
-    arg('--LGBM_LAMBDA', nargs='+',default='1.1,1.5',
-        type=lambda s: [float(item) for item in s.split(',')],
-        help='regularization 정규화 값을 조정할 범위로 조정할 수 있습니다.')
+
+    ############### CATB
+    arg('--CATB_TYPE', type=str, default='R', help='CATB Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
+    arg('--CATB_ITER', type=int, default=10000, help='same as n_estiamtors')
+    arg('--CATB_DEPTH', type=int, default=10, help='Depth of the tree')
+
+    ############### XGB
+    arg('--XGB_TYPE', type=str, default='R', help='LGBM Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
+    arg('--XGB_BOOSTER', type=str, default='gbtree', help='XGB에서 실행시킬 알고리즘(gbtree, gblinear)을 정의할 수 있습니다.')
+    arg('--XGB_N_ESTI', type=int, default='10', help='XGB에서 학습에 활용될 weak leaner의 반복 수를 조정할 수 있습니다.')
+    arg('--XGB_LAMBDA', type=int, default=1, help='XGB에서 L2 regularization 정규화 값을 조정할 수 있습니다.')
+    arg('--XGB_MIN_CHILD', type=int, default=1, help='XGB에서 leaf node에 포함되는 최소 관측치의 수를 조정할 수 있습니다.[0,inf]')
+    arg('--XGB_MAX_DEPTH', type=int, default=6, help='XGB에서 트리의 최대 깊이를 조정할 수 있습니다. [0,inf]')
 
     args = parser.parse_args()
     main(args)
