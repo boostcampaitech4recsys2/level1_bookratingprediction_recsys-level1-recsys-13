@@ -1,4 +1,6 @@
+import shutil
 import tqdm
+import pandas as pd
 
 import numpy as np
 
@@ -20,6 +22,7 @@ class FactorizationMachineModel:
 
         self.train_dataloader = data['train_dataloader']
         self.valid_dataloader = data['valid_dataloader']
+        self.test_dataloader = data['test_dataloader']
         self.field_dims = data['field_dims']
 
         self.embed_dim = args.FM_EMBED_DIM
@@ -39,6 +42,7 @@ class FactorizationMachineModel:
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
+        best_rmse_score = 9999
         for epoch in range(self.epochs):
             self.model.train()
             total_loss = 0
@@ -60,6 +64,10 @@ class FactorizationMachineModel:
             rmse_score = self.predict_train()
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
 
+            is_new_best = rmse_score < best_rmse_score
+            best_rmse_score = min(best_rmse_score, rmse_score)
+            if is_new_best:
+                self.predict(self.test_dataloader)
             if self.wandb_mode:
                 wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
 
@@ -84,7 +92,10 @@ class FactorizationMachineModel:
                 fields = fields[0].to(self.device)
                 y = self.model(fields)
                 predicts.extend(y.tolist())
-        return predicts
+        submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
+        submission['rating'] = predicts
+        submission.to_csv('submit/{}_EPOCHS_{}_EMBED_DIM{}.csv'.format(self.wandb_model_name, self.epochs, self.embed_dim))
+
 
 
 class FieldAwareFactorizationMachineModel:
