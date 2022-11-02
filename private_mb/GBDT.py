@@ -113,7 +113,7 @@ def all_params(args):
         'n_estimators':args.N_EST,
         'booster':args.XGB_BOOSTER,
         'min_child_weight':     hp.choice('min_child_weight', np.arange(*args.MIN_CHILD_W,dtype=int)),
-        'reg_lambda':           hp.uniform('reg_lambda', *args.XGB_LAMBDA)
+        'reg_lambda':           hp.uniform('reg_lambda', *args.XGB_LAMBDA),
         'learning_rate':        hp.choice('learning_rate', np.arange(*args.LR_RANGE))
         } #args.XGB_BOOSTER == 'gblinear
 
@@ -152,7 +152,7 @@ def all_params(args):
     # CatBoost parameters
     ctb_reg_params = {
         'n_estimators': args.N_EST,
-        'eval_metric': 'rmse',
+        'eval_metric': 'RMSE',
         'learning_rate':     hp.choice('learning_rate', np.arange(*args.LR_RANGE)),
         'max_depth':         hp.choice('max_depth', np.arange(*args.MAX_DEPTH, dtype=int)),
         'colsample_bylevel': hp.choice('colsample_bylevel', np.arange(*args.COLS))
@@ -188,7 +188,7 @@ class HPOpt:
             space_dict = self.ctb_para 
             
         try:
-            result = fmin(fn=fn, space=space_dict, algo=tpe.suggest, max_evals=100, trials=Trials())
+            result = fmin(fn=fn, space=space_dict, algo=tpe.suggest, max_evals=50, trials=Trials())
         except Exception as e:
             return {'status': STATUS_FAIL,
                     'exception': str(e)}
