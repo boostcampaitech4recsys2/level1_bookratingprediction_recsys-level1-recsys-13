@@ -77,7 +77,7 @@ def XGB(args, data):
                 'min_child_weight': args.XGB_MIN_CHILD,
                 'base_score' : 7
                 }
-    else: #args.XGB_BOOSTER == 'gblinear'
+    elif args.XGB_BOOSTER == 'gblinear': #args.XGB_BOOSTER == 'gblinear'
         parmas = {'objective':'reg:linear',
                 'eval_metric':'rmse',
                 'booster':args.XGB_BOOSTER,
