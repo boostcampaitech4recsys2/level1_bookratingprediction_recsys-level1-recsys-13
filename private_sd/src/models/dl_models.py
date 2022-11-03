@@ -43,7 +43,6 @@ class NeuralCollaborativeFiltering:
                                                     embed_dim=self.embed_dim, mlp_dims=self.mlp_dims, dropout=self.dropout).to(self.device)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.learning_rate, amsgrad=True, weight_decay=self.weight_decay)
 
-        self.wandb_model_name = args.MODEL
         self.wandb_mode = args.WANDB
 
 
@@ -218,7 +217,6 @@ class DeepCrossNetworkModel:
         self.model = _DeepCrossNetworkModel(self.field_dims, self.embed_dim, num_layers=self.num_layers, mlp_dims=self.mlp_dims, dropout=self.dropout).to(self.device)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.learning_rate, amsgrad=True, weight_decay=self.weight_decay)
 
-        self.wandb_model_name = args.MODEL
         self.wandb_mode = args.WANDB
 
 

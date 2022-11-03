@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-#from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
+from private_mb import  LGBM, CATB, XGB, rmse, feat_comb
 
 def main(args):
     seed_everything(args.SEED)
@@ -24,6 +24,7 @@ def main(args):
     ######################## SET WANDB
     if args.WANDB:
         wandb.init(project="test-project", entity="ai-tech-4-recsys13")
+        wandb.run.name = 'FEATURE_COMBINE:' + args.MODEL + '_BATCHSIZE:' + str(args.BATCH_SIZE)
         wandb.config = {
             "learning_rate": args.LR ,
             "epochs": args.EPOCHS,
@@ -56,6 +57,8 @@ def main(args):
 
     elif args.MODEL in ('NCF', 'WDN', 'DCN'):
         data = dl_data_split(args, data)
+        if args.FEAT_COMB: # Feature Combine Ensemble
+            data['X_train'], data['X_valid'] = feat_comb(args.ENSEMBLE_FILES, data)        
         data = dl_data_loader(args, data)
 
     elif args.MODEL=='CNN_FM':
@@ -160,7 +163,7 @@ if __name__ == "__main__":
     ############### TRAINING OPTION
     arg('--BATCH_SIZE', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')
     arg('--EPOCHS', type=int, default=10, help='Epoch 수를 조정할 수 있습니다.')
-    arg('--LR', type=float, default=3e-3, help='Learning Rate를 조정할 수 있습니다.')
+    arg('--LR', type=float, default=1e-3, help='Learning Rate를 조정할 수 있습니다.')
     arg('--WEIGHT_DECAY', type=float, default=1e-6, help='Adam optimizer에서 정규화에 사용하는 값을 조정할 수 있습니다.')
 
     ############### GPU
@@ -220,6 +223,13 @@ if __name__ == "__main__":
     arg('--XGB_LAMBDA', type=int, default=1, help='XGB에서 L2 regularization 정규화 값을 조정할 수 있습니다.')
     arg('--XGB_MIN_CHILD', type=int, default=1, help='XGB에서 leaf node에 포함되는 최소 관측치의 수를 조정할 수 있습니다.[0,inf]')
     arg('--XGB_MAX_DEPTH', type=int, default=6, help='XGB에서 트리의 최대 깊이를 조정할 수 있습니다. [0,inf]')
+
+    ############### FEATURE COMBINE
+    arg('--FEAT_COMB', type=bool, default=False, help='FEATURE COMBINE 여부를 선택할 수 있습니다.')
+    arg("--ENSEMBLE_FILES", nargs='+',required=False,
+        type=lambda s: [item for item in s.split(',')],
+        help='required: 앙상블할 submit 파일명을 쉼표(,)로 구분하여 모두 입력해 주세요. 이 때, .csv와 같은 확장자는 입력하지 않습니다.')
+
 
     args = parser.parse_args()
     main(args)
