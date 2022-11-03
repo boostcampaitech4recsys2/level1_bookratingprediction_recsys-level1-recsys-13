@@ -101,7 +101,7 @@ class NeuralCollaborativeFiltering:
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
         submission.to_csv('submit/{}_EPOCHS_{}_EMBED_DIM{}_BATHC_SIZE{}.csv'.format(self.wandb_model_name, self.epochs, self.embed_dim, self.batch_size))
-
+        return predicts
 
 class WideAndDeepModel:
 
@@ -276,3 +276,4 @@ class DeepCrossNetworkModel:
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
         submission.to_csv('submit/{}_EPOCHS_{}_EMBED_DIM{}_BATHC_SIZE{}.csv'.format(self.wandb_model_name, self.epochs, self.embed_dim, self.batch_size))
+        return predicts
