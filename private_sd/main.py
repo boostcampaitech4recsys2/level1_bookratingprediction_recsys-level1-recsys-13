@@ -18,21 +18,13 @@ import wandb
 
 from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
 
-def predicts_map(x: float) -> float:
-    if x < 1:
-        return 1.0
-    elif x > 10:
-        return 10.0
-    else:
-        return x
-
 def main(args):
     seed_everything(args.SEED)
 
     ######################## SET WANDB
     if args.WANDB:
         wandb.init(project="test-project", entity="ai-tech-4-recsys13")
-        wandb.run.name =  args.MODEL #+ '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
+        wandb.run.name = 'data_mb_' + args.MODEL + '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
         wandb.config = {
             "learning_rate": args.LR ,
             "epochs": args.EPOCHS,
@@ -70,6 +62,10 @@ def main(args):
     elif args.MODEL=='CNN_FM':
         data = image_data_split(args, data)
         data = image_data_loader(args, data)
+
+    elif args.MODEL=='DeepCoNN':
+        data = text_data_split(args, data)
+        data = text_data_loader(args, data)
 
     elif args.MODEL=='DeepCoNN':
         data = text_data_split(args, data)
@@ -117,38 +113,32 @@ def main(args):
         wandb.finish()
 
     ######################## INFERENCE
-    
-    #if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
-    #    predicts = model.predict(data['test_dataloader'])
-    #elif args.MODEL=='CNN_FM':
-    #    predicts  = model.predict(data['test_dataloader'])
-    #elif args.MODEL=='DeepCoNN':
-    #    predicts  = model.predict(data['test_dataloader'])
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        print(f'--------------- {args.MODEL} PREDICT ---------------')
+    print(f'--------------- {args.MODEL} PREDICT ---------------')
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
+        predicts = model.predict(data['test_dataloader'])
+    elif args.MODEL=='CNN_FM':
+        predicts  = model.predict(data['test_dataloader'])
+    elif args.MODEL=='DeepCoNN':
+        predicts  = model.predict(data['test_dataloader'])
+    elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         predicts  = model.predict(data['test'])
         # print('RMSE(LGBM):', rmse(data['test'], predicts))
     else:
         pass
-
+    
     ######################## SAVE PREDICT
+    print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
     submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
-    if args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
+    if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'):
         submission['rating'] = predicts
-        submission['rating'] = submission['rating'].apply(predicts_map)
-        now = time.localtime()
-        now_date = time.strftime('%Y%m%d', now)
-        now_hour = time.strftime('%X', now)
-        save_time = now_date + '_' + now_hour.replace(':', '')
-        submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
     else:
         pass
-    # now = time.localtime()
-    # now_date = time.strftime('%Y%m%d', now)
-    # now_hour = time.strftime('%X', now)
-    # save_time = now_date + '_' + now_hour.replace(':', '')
-    # submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
+
+    now = time.localtime()
+    now_date = time.strftime('%Y%m%d', now)
+    now_hour = time.strftime('%X', now)
+    save_time = now_date + '_' + now_hour.replace(':', '')
+    submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
 
 
 
@@ -166,6 +156,7 @@ if __name__ == "__main__":
     arg('--TEST_SIZE', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
     arg('--SEED', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--WANDB', type=bool, default=False, help='wandb 기록 여부를 선택할 수 있습니다.')
+    arg('--EXP_DIR', type=str, default='models/', help='모델을 저장할 위치를 선택할 수 있습니다.')
     
 
     ############### TRAINING OPTION

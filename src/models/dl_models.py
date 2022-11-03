@@ -1,4 +1,5 @@
 import tqdm
+import pandas as pd
 
 import numpy as np
 
@@ -11,6 +12,14 @@ from ._models import rmse, RMSELoss
 
 import wandb
 
+def predicts_map(x: float) -> float:
+    if x < 1:
+        return 1.0
+    elif x > 10:
+        return 10.0
+    else:
+        return x
+
 class NeuralCollaborativeFiltering:
 
     def __init__(self, args, data):
@@ -20,6 +29,7 @@ class NeuralCollaborativeFiltering:
 
         self.train_dataloader = data['train_dataloader']
         self.valid_dataloader = data['valid_dataloader']
+        self.test_dataloader = data['test_dataloader']        
         self.field_dims = data['field_dims']
         self.user_field_idx = np.array((0, ), dtype=np.long)
         self.item_field_idx=np.array((1, ), dtype=np.long)
@@ -29,6 +39,8 @@ class NeuralCollaborativeFiltering:
         self.learning_rate = args.LR
         self.weight_decay = args.WEIGHT_DECAY
         self.log_interval = 100
+        self.data_path = args.DATA_PATH
+        self.batch_size = args.BATCH_SIZE
 
         self.device = args.DEVICE
 
@@ -45,6 +57,7 @@ class NeuralCollaborativeFiltering:
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
+        best_rmse_score = 9999        
         for epoch in range(self.epochs):
             self.model.train()
             total_loss = 0
@@ -63,6 +76,11 @@ class NeuralCollaborativeFiltering:
 
             rmse_score = self.predict_train()
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
+            
+            is_new_best = rmse_score < best_rmse_score
+            best_rmse_score = min(best_rmse_score, rmse_score)
+            if is_new_best:
+                self.predict(self.test_dataloader)
 
             if self.wandb_mode:
                 wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
@@ -88,6 +106,11 @@ class NeuralCollaborativeFiltering:
                 fields = fields[0].to(self.device)
                 y = self.model(fields)
                 predicts.extend(y.tolist())
+        submission = pd.read_csv(self.data_path + 'sample_submission.csv')
+        submission['rating'] = predicts
+        submission['rating'] = submission['rating'].apply(predicts_map)
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:-1]}_BATHC_SIZE{self.batch_size}.csv')
+
         return predicts
 
 
@@ -100,6 +123,7 @@ class WideAndDeepModel:
 
         self.train_dataloader = data['train_dataloader']
         self.valid_dataloader = data['valid_dataloader']
+        self.test_dataloader = data['test_dataloader']
         self.field_dims = data['field_dims']
 
         self.embed_dim = args.WDN_EMBED_DIM
@@ -107,6 +131,8 @@ class WideAndDeepModel:
         self.learning_rate = args.LR
         self.weight_decay = args.WEIGHT_DECAY
         self.log_interval = 100
+        self.data_path = args.DATA_PATH
+        self.batch_size = args.BATCH_SIZE
 
         self.device = args.DEVICE
 
@@ -122,6 +148,7 @@ class WideAndDeepModel:
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
+        best_rmse_score = 9999
         for epoch in range(self.epochs):
             self.model.train()
             total_loss = 0
@@ -140,7 +167,10 @@ class WideAndDeepModel:
 
             rmse_score = self.predict_train()
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
-
+            is_new_best = rmse_score < best_rmse_score
+            best_rmse_score = min(best_rmse_score, rmse_score)
+            if is_new_best:
+                self.predict(self.test_dataloader)
             if self.wandb_mode:
                 wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
 
@@ -165,6 +195,11 @@ class WideAndDeepModel:
                 fields = fields[0].to(self.device)
                 y = self.model(fields)
                 predicts.extend(y.tolist())
+        submission = pd.read_csv(self.data_path + 'sample_submission.csv')
+        submission['rating'] = predicts
+        submission['rating'] = submission['rating'].apply(predicts_map)
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:-1]}_BATHC_SIZE{self.batch_size}.csv')
+
         return predicts
 
 
@@ -177,6 +212,7 @@ class DeepCrossNetworkModel:
 
         self.train_dataloader = data['train_dataloader']
         self.valid_dataloader = data['valid_dataloader']
+        self.test_dataloader = data['test_dataloader']
         self.field_dims = data['field_dims']
 
         self.embed_dim = args.DCN_EMBED_DIM
@@ -184,6 +220,8 @@ class DeepCrossNetworkModel:
         self.learning_rate = args.LR
         self.weight_decay = args.WEIGHT_DECAY
         self.log_interval = 100
+        self.data_path = args.DATA_PATH
+        self.batch_size = args.BATCH_SIZE
 
         self.device = args.DEVICE
 
@@ -200,6 +238,7 @@ class DeepCrossNetworkModel:
 
     def train(self):
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
+        best_rmse_score = 9999
         for epoch in range(self.epochs):
             self.model.train()
             total_loss = 0
@@ -218,6 +257,11 @@ class DeepCrossNetworkModel:
 
             rmse_score = self.predict_train()
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
+
+            is_new_best = rmse_score < best_rmse_score
+            best_rmse_score = min(best_rmse_score, rmse_score)
+            if is_new_best:
+                self.predict(self.test_dataloader)
 
             if self.wandb_mode:
                 wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
@@ -243,4 +287,9 @@ class DeepCrossNetworkModel:
                 fields = fields[0].to(self.device)
                 y = self.model(fields)
                 predicts.extend(y.tolist())
+        submission = pd.read_csv(self.data_path + 'sample_submission.csv')
+        submission['rating'] = predicts
+        submission['rating'] = submission['rating'].apply(predicts_map)
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:-1]}_BATHC_SIZE{self.batch_size}.csv')
+
         return predicts
