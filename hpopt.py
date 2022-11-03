@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import HPOpt, XGB, LGBM, CATB, rmse, feat_comb
+from private_mb import data_exp_load, HPOpt, XGB, LGBM, CATB, rmse, feat_comb
 
 def main(args):
     seed_everything(args.SEED)
@@ -45,6 +45,7 @@ def main(args):
         nltk.download('punkt')
         data = text_data_load(args)
     elif args.MODEL in ('LGBM','CATB','XGB'):
+        #data = data_exp_load(args)
         data = context_data_load(args)
     else:
         pass
