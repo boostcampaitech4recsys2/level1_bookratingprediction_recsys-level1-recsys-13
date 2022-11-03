@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
+#from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
 
 def main(args):
     seed_everything(args.SEED)
@@ -24,7 +24,6 @@ def main(args):
     ######################## SET WANDB
     if args.WANDB:
         wandb.init(project="test-project", entity="ai-tech-4-recsys13")
-        wandb.run.name = 'data_mb_' + args.MODEL + '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
         wandb.config = {
             "learning_rate": args.LR ,
             "epochs": args.EPOCHS,
@@ -37,7 +36,7 @@ def main(args):
     if args.MODEL in ('FM', 'FFM'):
         data = context_data_load(args)
     elif args.MODEL in ('NCF', 'WDN', 'DCN'):
-        data = dl_data_load(args)
+        data = context_data_load(args)
     elif args.MODEL == 'CNN_FM':
         data = image_data_load(args)
     elif args.MODEL == 'DeepCoNN':
@@ -93,12 +92,12 @@ def main(args):
         model = CNN_FM(args, data)
     elif args.MODEL=='DeepCoNN':
         model = DeepCoNN(args, data)
-    elif args.MODEL=='LGBM':
-        model = LGBM(args, data)
-    elif args.MODEL=='CATB':
-        model = CATB(args, data)
-    elif args.MODEL=='XGB':
-        model = XGB(args, data)
+    #elif args.MODEL=='LGBM':
+    #    model = LGBM(args, data)
+    #elif args.MODEL=='CATB':
+    #    model = CATB(args, data)
+    #elif args.MODEL=='XGB':
+    #    model = XGB(args, data)
     else:
         pass
 
@@ -112,27 +111,27 @@ def main(args):
     if args.WANDB:
         wandb.finish()
 
-    ######################## INFERENCE
+    ####################### INFERENCE
     print(f'--------------- {args.MODEL} PREDICT ---------------')
     if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN'):
-        predicts = model.predict(data['test_dataloader'])
+       predicts = model.predict(data['test_dataloader'])
     elif args.MODEL=='CNN_FM':
-        predicts  = model.predict(data['test_dataloader'])
+       predicts  = model.predict(data['test_dataloader'])
     elif args.MODEL=='DeepCoNN':
-        predicts  = model.predict(data['test_dataloader'])
+       predicts  = model.predict(data['test_dataloader'])
     elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        predicts  = model.predict(data['test'])
-        # print('RMSE(LGBM):', rmse(data['test'], predicts))
+       predicts  = model.predict(data['test'])
+       # print('RMSE(LGBM):', rmse(data['test'], predicts))
     else:
-        pass
+       pass
     
-    ######################## SAVE PREDICT
+    ####################### SAVE PREDICT
     print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
     submission = pd.read_csv(args.DATA_PATH + 'sample_submission.csv')
     if args.MODEL in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'):
-        submission['rating'] = predicts
+       submission['rating'] = predicts
     else:
-        pass
+       pass
 
     now = time.localtime()
     now_date = time.strftime('%Y%m%d', now)
@@ -156,13 +155,12 @@ if __name__ == "__main__":
     arg('--TEST_SIZE', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
     arg('--SEED', type=int, default=42, help='seed 값을 조정할 수 있습니다.')
     arg('--WANDB', type=bool, default=False, help='wandb 기록 여부를 선택할 수 있습니다.')
-    arg('--EXP_DIR', type=str, default='models/', help='모델을 저장할 위치를 선택할 수 있습니다.')
     
 
     ############### TRAINING OPTION
     arg('--BATCH_SIZE', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')
     arg('--EPOCHS', type=int, default=10, help='Epoch 수를 조정할 수 있습니다.')
-    arg('--LR', type=float, default=1e-3, help='Learning Rate를 조정할 수 있습니다.')
+    arg('--LR', type=float, default=3e-3, help='Learning Rate를 조정할 수 있습니다.')
     arg('--WEIGHT_DECAY', type=float, default=1e-6, help='Adam optimizer에서 정규화에 사용하는 값을 조정할 수 있습니다.')
 
     ############### GPU
@@ -175,19 +173,19 @@ if __name__ == "__main__":
     arg('--FFM_EMBED_DIM', type=int, default=16, help='FFM에서 embedding시킬 차원을 조정할 수 있습니다.')
 
     ############### NCF
-    arg('--NCF_EMBED_DIM', type=int, default=16, help='NCF에서 embedding시킬 차원을 조정할 수 있습니다.')
-    arg('--NCF_MLP_DIMS', type=list, default=(16, 16), help='NCF에서 MLP Network의 차원을 조정할 수 있습니다.')
-    arg('--NCF_DROPOUT', type=float, default=0.2, help='NCF에서 Dropout rate를 조정할 수 있습니다.')
+    arg('--NCF_EMBED_DIM', type=int, default=128, help='NCF에서 embedding시킬 차원을 조정할 수 있습니다.')
+    arg('--NCF_MLP_DIMS', type=list, default=(128, 128), help='NCF에서 MLP Network의 차원을 조정할 수 있습니다.')
+    arg('--NCF_DROPOUT', type=float, default=0.1, help='NCF에서 Dropout rate를 조정할 수 있습니다.')
 
     ############### WDN
-    arg('--WDN_EMBED_DIM', type=int, default=16, help='WDN에서 embedding시킬 차원을 조정할 수 있습니다.')
-    arg('--WDN_MLP_DIMS', type=list, default=(16, 16), help='WDN에서 MLP Network의 차원을 조정할 수 있습니다.')
+    arg('--WDN_EMBED_DIM', type=int, default=128, help='WDN에서 embedding시킬 차원을 조정할 수 있습니다.')
+    arg('--WDN_MLP_DIMS', type=list, default=(128, 128), help='WDN에서 MLP Network의 차원을 조정할 수 있습니다.')
     arg('--WDN_DROPOUT', type=float, default=0.2, help='WDN에서 Dropout rate를 조정할 수 있습니다.')
 
     ############### DCN
-    arg('--DCN_EMBED_DIM', type=int, default=16, help='DCN에서 embedding시킬 차원을 조정할 수 있습니다.')
-    arg('--DCN_MLP_DIMS', type=list, default=(16, 16), help='DCN에서 MLP Network의 차원을 조정할 수 있습니다.')
-    arg('--DCN_DROPOUT', type=float, default=0.2, help='DCN에서 Dropout rate를 조정할 수 있습니다.')
+    arg('--DCN_EMBED_DIM', type=int, default=128, help='DCN에서 embedding시킬 차원을 조정할 수 있습니다.')
+    arg('--DCN_MLP_DIMS', type=list, default=(128, 128), help='DCN에서 MLP Network의 차원을 조정할 수 있습니다.')
+    arg('--DCN_DROPOUT', type=float, default=0.15, help='DCN에서 Dropout rate를 조정할 수 있습니다.')
     arg('--DCN_NUM_LAYERS', type=int, default=3, help='DCN에서 Cross Network의 레이어 수를 조정할 수 있습니다.')
 
     ############### CNN_FM
