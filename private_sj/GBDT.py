@@ -9,8 +9,6 @@ from catboost import CatBoostRegressor, CatBoostClassifier, Pool
 
 from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader
-
 def LGBM(args, data):
     X_train, X_valid, y_train, y_valid = data['X_train'], data['X_valid'], data['y_train'], data['y_valid']
     
@@ -28,13 +26,16 @@ def LGBM(args, data):
             }
 
     if args.LGBM_TYPE == 'C':
-        lgbm = LGBMClassifier(**params, n_estimators=1500, random_state=args.SEED)
+        lgbm = LGBMClassifier(**params, n_estimators=1500, early_stopping_rounds=100, random_state=args.SEED)
         # rmse(y_test,catboost_pred_cl.squeeze(1))
     else:
-        lgbm = LGBMRegressor(**params, n_estimators=12000, random_state=args.SEED)
+        lgbm = LGBMRegressor(**params, n_estimators=12000, early_stopping_rounds=500, random_state=args.SEED)
 
     evaluation = [(X_train, y_train),(X_valid, y_valid)]
-    lgbm.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse', early_stopping_rounds=100, verbose=False)
+    lgbm.fit(X_train, y_train, eval_set = evaluation, eval_metric='rmse', verbose=1000)
+
+    trial = Trials()
+    # best_hyperparams = fmin(fn = objective)
 
     return lgbm
     
@@ -76,14 +77,14 @@ def XGB(args, data):
                 'min_child_weight': args.XGB_MIN_CHILD,
                 'base_score' : 7
                 }
-    else: #args.XGB_BOOSTER == 'gblinear'
+    elif args.XGB_BOOSTER == 'gblinear': #args.XGB_BOOSTER == 'gblinear'
         parmas = {'objective':'reg:linear',
                 'eval_metric':'rmse',
                 'booster':args.XGB_BOOSTER,
                 'n_estimators':args.XGB_N_ESTI,
                 'reg_lambda': args.XGB_LAMBDA,
                 'learning_rate': args.LR,
-                'base_score' : 7
+                'base_score': 7
                 }
 
     if args.XGB_TYPE == 'C':
@@ -97,8 +98,6 @@ def XGB(args, data):
     xgb.fit(X_train, y_train, eval_set = [(X_valid, y_valid)], verbose=True)
 
     return xgb
-
-
 
 
 def modify_range(rating):

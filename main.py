@@ -18,13 +18,21 @@ import wandb
 
 from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
 
+def predicts_map(x: float) -> float:
+    if x < 1:
+        return 1.0
+    elif x > 10:
+        return 10.0
+    else:
+        return x
+
 def main(args):
     seed_everything(args.SEED)
 
     ######################## SET WANDB
     if args.WANDB:
         wandb.init(project="test-project", entity="ai-tech-4-recsys13")
-        wandb.run.name = 'data_mb_' + args.MODEL + '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
+        wandb.run.name =  args.MODEL #+ '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
         wandb.config = {
             "learning_rate": args.LR ,
             "epochs": args.EPOCHS,
@@ -62,10 +70,6 @@ def main(args):
     elif args.MODEL=='CNN_FM':
         data = image_data_split(args, data)
         data = image_data_loader(args, data)
-
-    elif args.MODEL=='DeepCoNN':
-        data = text_data_split(args, data)
-        data = text_data_loader(args, data)
 
     elif args.MODEL=='DeepCoNN':
         data = text_data_split(args, data)
@@ -132,13 +136,19 @@ def main(args):
     if args.MODEL in ('LGBM', 'CATB', 'XGB'):
         print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
         submission['rating'] = predicts
+        submission['rating'] = submission['rating'].apply(predicts_map)
+        now = time.localtime()
+        now_date = time.strftime('%Y%m%d', now)
+        now_hour = time.strftime('%X', now)
+        save_time = now_date + '_' + now_hour.replace(':', '')
+        submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
     else:
         pass
-    now = time.localtime()
-    now_date = time.strftime('%Y%m%d', now)
-    now_hour = time.strftime('%X', now)
-    save_time = now_date + '_' + now_hour.replace(':', '')
-    submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
+    # now = time.localtime()
+    # now_date = time.strftime('%Y%m%d', now)
+    # now_hour = time.strftime('%X', now)
+    # save_time = now_date + '_' + now_hour.replace(':', '')
+    # submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
 
 
 
