@@ -16,7 +16,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import HPOpt, XGB, LGBM, CATB, rmse
+from private_mb import HPOpt, XGB, LGBM, CATB, rmse, feat_comb
 
 def main(args):
     seed_everything(args.SEED)
@@ -69,6 +69,10 @@ def main(args):
 
     elif args.MODEL in ('XGB', 'LGBM', 'CATB'):
         data = context_data_split(args, data)
+
+        if args.FEAT_COMB: # Feature Combine Ensemble
+            data['X_train'], data['X_valid'] = feat_comb(args.ENSEMBLE_FILES, data)
+            
         hpopt = HPOpt(args, data)
 
     else:
@@ -91,15 +95,24 @@ def main(args):
     elif args.MODEL=='DeepCoNN':
         model = DeepCoNN(args, data)
     elif args.MODEL=='XGB':
-        xgb_opt_param = hpopt.process(fn_name='xgb_reg', space='xgb')
+        if args.TYPE == 'C':
+            xgb_opt_param = hpopt.process(fn_name='xgb_cls', space='xgb')
+        else:
+            xgb_opt_param = hpopt.process(fn_name='xgb_reg', space='xgb')
         model = XGB(args, data, xgb_opt_param)
         print(xgb_opt_param)
     elif args.MODEL=='LGBM':
-        lgb_opt_param = hpopt.process(fn_name='lgb_reg', space='lgb')
+        if args.TYPE == 'C':
+            lgb_opt_param = hpopt.process(fn_name='lgb_cls', space='lgb')
+        else:
+            lgb_opt_param = hpopt.process(fn_name='lgb_reg', space='lgb')
         model = LGBM(args, data, lgb_opt_param)
         print(lgb_opt_param)
     elif args.MODEL=='CATB':
-        ctb_opt_param = hpopt.process(fn_name='ctb_reg', space='ctb')
+        if args.TYPE == 'C':
+            ctb_opt_param = hpopt.process(fn_name='ctb_cls', space='ctb')
+        else:
+            ctb_opt_param = hpopt.process(fn_name='ctb_reg', space='ctb')
         model = CATB(args, data, ctb_opt_param)
         print(ctb_opt_param)
     else:
@@ -207,7 +220,7 @@ if __name__ == "__main__":
 
     ############### GBDT (공통)
     arg('--TYPE', type=str, default='R', help='Classifier(C)와 Regressor(R) 중 고를 수 있습니다.')
-    arg('--N_EST', type=int, default=500, help='학습에 활용될 weak learner의 반복 수를 조정할 수 있습니다.')
+    arg('--N_EST', type=int, default=200, help='학습에 활용될 weak learner의 반복 수를 조정할 수 있습니다.')
 
     arg('--LR_RANGE', nargs='+',default='0.05,0.3',
         type=lambda s: [float(item) for item in s.split(',')],
@@ -234,6 +247,13 @@ if __name__ == "__main__":
     arg('--LGBM_LAMBDA', nargs='+',default='1.1,1.5',
         type=lambda s: [float(item) for item in s.split(',')],
         help='regularization 정규화 값을 조정할 범위로 조정할 수 있습니다.')
+
+    ############### FEATURE COMBINE
+    arg('--FEAT_COMB', type=bool, default=False, help='FEATURE COMBINE 여부를 선택할 수 있습니다.')
+
+    arg("--ENSEMBLE_FILES", nargs='+',required=False,
+        type=lambda s: [item for item in s.split(',')],
+        help='required: 앙상블할 submit 파일명을 쉼표(,)로 구분하여 모두 입력해 주세요. 이 때, .csv와 같은 확장자는 입력하지 않습니다.')
 
     args = parser.parse_args()
     main(args)

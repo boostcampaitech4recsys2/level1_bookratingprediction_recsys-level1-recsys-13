@@ -35,10 +35,14 @@ def XGB(args, data, params):
         xgb = XGBClassifier(**params, random_state=args.SEED)
         # rmse(y_test,catboost_pred_cl.squeeze(1))
     else:
-        xgb = XGBRegressor(**params, random_state=args.SEED)
+        xgb = XGBRegressor(**params, 
+                            objective='reg:squarederror',
+                            n_estimators=10000,
+                            booster=args.XGB_BOOSTER,
+                            random_state=args.SEED)
     
     evaluation = [(X_train, y_train),(X_valid, y_valid)]
-    xgb.fit(X_train, y_train, eval_set=evaluation, early_stopping_rounds=100, verbose=1000)
+    xgb.fit(X_train, y_train, eval_set=evaluation, early_stopping_rounds=50, verbose=50)
 
     return xgb
 
@@ -59,13 +63,13 @@ def LGBM(args, data, params):
     X_train, y_train, X_valid, y_valid = data['X_train'], data['y_train'], data['X_valid'], data['y_valid']
 
     if args.TYPE == 'C':
-        lgbm = LGBMClassifier(**params, n_estimators=1500, random_state=args.SEED)
+        lgbm = LGBMClassifier(**params, n_estimators=10000, random_state=args.SEED)
         # rmse(y_test,catboost_pred_cl.squeeze(1))
     else:
-        lgbm = LGBMRegressor(**params, n_estimators=12000, random_state=args.SEED)
+        lgbm = LGBMRegressor(**params, n_estimators=10000, random_state=args.SEED)
 
     evaluation = [(X_train, y_train),(X_valid, y_valid)]
-    lgbm.fit(X_train, y_train, eval_set=evaluation, eval_metric='rmse', early_stopping_rounds=100, verbose=1000)
+    lgbm.fit(X_train, y_train, eval_set=evaluation, eval_metric='rmse', early_stopping_rounds=50, verbose=50)
 
     return lgbm
 
@@ -80,13 +84,17 @@ def CATB(args, data, params):
     X_train, y_train, X_valid, y_valid = data['X_train'], data['y_train'], data['X_valid'], data['y_valid']
 
     if args.TYPE == 'C':
-        catb = CatBoostClassifier(**params, random_state=args.SEED)
+        catb = CatBoostClassifier(**params, 
+                                n_estimators=10000,
+                                random_state=args.SEED)
         # rmse(y_test,catboost_pred_cl.squeeze(1))
     else:
-        catb = CatBoostRegressor(**params, random_state=args.SEED)
+        catb = CatBoostRegressor(**params,
+                                n_estimators=10000,
+                                random_state=args.SEED)
 
     evaluation = [(X_train, y_train),(X_valid, y_valid)]
-    catb.fit(X_train, y_train, eval_set = evaluation, early_stopping_rounds=100, verbose=1000)
+    catb.fit(X_train, y_train, eval_set = evaluation, early_stopping_rounds=50, verbose=50)
     return catb
 
 
@@ -113,7 +121,8 @@ def all_params(args):
         'n_estimators':args.N_EST,
         'booster':args.XGB_BOOSTER,
         'reg_lambda':           hp.uniform('reg_lambda', *args.XGB_LAMBDA),
-        'learning_rate':        hp.loguniform('learning_rate', np.log(0.05), np.log(0.3))
+        'learning_rate':        hp.loguniform('learning_rate', np.log(0.05), np.log(0.3)),
+        'random_state': args.SEED
         } #args.XGB_BOOSTER == 'gblinear
 
     if args.XGB_BOOSTER == 'gbtree':
@@ -131,13 +140,15 @@ def all_params(args):
 
     # LightGBM parameters
     lgb_reg_params = {
+        'objective':'rmse',
         'n_estimators':     args.N_EST,
         'learning_rate':    hp.loguniform('learning_rate', np.log(0.05), np.log(0.3)),
         'max_depth':        hp.choice('max_depth',        np.arange(*args.MAX_DEPTH)),
         'min_child_weight': hp.choice('min_child_weight', np.arange(*args.MIN_CHILD_W)),
         'colsample_bytree': hp.uniform('colsample_bytree', 0.1, 0.5),
         'subsample':        hp.uniform('subsample', 0.8, 1),
-        'reg_lambda':       hp.uniform('reg_lambda', *args.LGBM_LAMBDA)
+        'reg_lambda':       hp.uniform('reg_lambda', *args.LGBM_LAMBDA),
+        'random_state': args.SEED
     }
     lgb_fit_params = {
         'eval_metric': 'rmse',
@@ -154,7 +165,8 @@ def all_params(args):
         'eval_metric': 'RMSE',
         'learning_rate':     hp.loguniform('learning_rate', np.log(0.05), np.log(0.3)),
         'max_depth':         hp.choice('max_depth', np.arange(*args.MAX_DEPTH)),
-        'colsample_bylevel': hp.uniform('colsample_bylevel', 0.1, 0.5)
+        'colsample_bylevel': hp.uniform('colsample_bylevel', 0.1, 0.5),
+        'random_state': args.SEED
         }
     ctb_fit_params = {
         'early_stopping_rounds': 100,
@@ -204,6 +216,18 @@ class HPOpt:
     def ctb_reg(self, para):
         reg = CatBoostRegressor(**para['reg_params'])
         return self.train_reg(reg, para)
+
+    def xgb_cls(self, para):
+        clsf = XGBClassifier(**para['reg_params'])
+        return self.train_reg(clsf, para)
+    
+    def lgb_cls(self, para):
+        clsf = LGBMClassifier(**para['reg_params'])
+        return self.train_reg(clsf, para)
+    
+    def ctb_cls(self, para):
+        clsf = CatBoostClassifier(**para['reg_params'])
+        return self.train_reg(clsf, para)
     
     def train_reg(self, reg, para):
         reg.fit(self.x_train, self.y_train,
@@ -213,3 +237,30 @@ class HPOpt:
         pred = reg.predict(self.x_test)
         loss = rmse(self.y_test, pred)
         return {'loss': loss, 'status':STATUS_OK}
+    
+    def train_cls(self, clsf, para):
+        pass
+
+
+def feat_comb(filenames, data):
+    X_train, X_valid = data['X_train'], data['X_valid']
+    isbn2idx = data['isbn2idx']
+    user2idx = data['user2idx']
+
+    file_list = sum(filenames, [])
+    filepath = 'submit/'
+    output_path = [filepath+f+'.csv' for f in file_list]
+
+    for idx, path in enumerate(output_path):
+        output = pd.read_csv(path)
+        output['isbn'] = output['isbn'].map(isbn2idx)
+        output['user_id'] = output['user_id'].map(user2idx)
+        #output['rating'] = output['rating'].map(round) # round output ratings - maybe only when classifier?
+        output.rename(columns={'rating':f'output_{idx}'}, inplace=True)
+
+        X_train.merge(output, on=['user_id', 'isbn'], how='left')
+        X_valid.merge(output, on=['user_id', 'isbn'], how='left')
+
+    return X_train, X_valid
+
+ 
