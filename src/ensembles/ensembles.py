@@ -29,6 +29,10 @@ class Ensemble:
             pred_arr = np.append(pred_arr, [self.output_list[i]], axis=0)
         result = np.dot(pred_arr.T, np.array(weight))
         return result.tolist()
+    
+    def median(self):   
+        result = np.median(self.output_list, axis = 0)
+        return result.tolist()
 
     # Average Weighted
     # (1/n)의 가중치로 앙상블을 진행합니다.
