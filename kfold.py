@@ -6,7 +6,12 @@ import numpy as np
 from src import seed_everything
 
 from src.data import context_data_load, context_data_split, context_data_loader
+from src.data import fm_data_load, fm_data_split, fm_data_loader
+from src.data import ffm_data_load, ffm_data_split, ffm_data_loader
 from src.data import dl_data_load, dl_data_split, dl_data_loader
+from src.data import ncf_data_load, ncf_data_split, ncf_data_loader
+from src.data import dcn_data_load, dcn_data_split, dcn_data_loader
+from src.data import wdn_data_load, wdn_data_split, wdn_data_loader
 from src.data import image_data_load, image_data_split, image_data_loader
 from src.data import text_data_load, text_data_split, text_data_loader
 
@@ -26,16 +31,19 @@ def main(args):
 
     ######################## DATA LOAD
     print(f'--------------- {args.MODEL} Load Data ---------------')
-    if args.MODEL in ('FM', 'FFM'):
-        data = context_data_load(args)
-    elif args.MODEL in ('NCF', 'WDN', 'DCN'):
-        data = dl_data_load(args)
-    elif args.MODEL == 'CNN_FM':
-        data = image_data_load(args)
-    elif args.MODEL == 'DeepCoNN':
-        import nltk
-        nltk.download('punkt')
-        data = text_data_load(args)
+    if args.MODEL in ('FM'):
+        data = fm_data_load(args)
+    elif args.MODEL in ('FFM'):
+        data = ffm_data_load(args)
+    elif args.MODEL in ('WDN'):
+        data = wdn_data_load(args)
+    elif args.MODEL in ('DCN'):
+        data = dcn_data_load(args)
+    elif args.MODEL in ('NCF'):
+        data = ncf_data_load(args)
+    elif args.MODEL in ('CNN_FM', 'DeepCoNN'):
+        print('We do not support CNN_FM & DeepCoNN models at this kfold file.\n')
+        return
     elif args.MODEL in ('LGBM','CATB','XGB'):
         data = context_data_load(args)
     else:
@@ -58,36 +66,19 @@ def main(args):
             data['X_valid'] = pd.DataFrame(X_valid)
             data['y_train'] = pd.DataFrame(y_train).squeeze()
             data['y_valid'] = pd.DataFrame(y_valid).squeeze()
-            data = context_data_loader(args, data) # context_data_loader와 dl_data_loader는 동일한 함수
+            if args.MODEL in ('FM'):
+                data = fm_data_loader(args, data)
+            elif args.MODEL in ('FFM'):
+                data = ffm_data_loader(args, data)
+            elif args.MODEL in ('NCF'):
+                data = ncf_data_loader(args, data)
+            elif args.MODEL in ('WDN'):
+                data = wdn_data_loader(args, data)
+            elif args.MODEL in ('DCN'):
+                data = dcn_data_loader(args, data)
+            else:
+                pass
             data_list.append(data)
-
-    elif args.MODEL in ('CNN_FM'): # CNN_FM 모델에 대한 데이터 전처리가 되어있지 않습니다.
-    #     X_data = np.array(data['img_train'][['user_id', 'isbn', 'img_vector']])
-    #     y_data = np.array(data['img_train']['rating'])
-    #     for train_idx, test_idx in kf.split(X_data):
-    #         X_train, X_valid = X_data[train_idx], X_data[test_idx]
-    #         y_train, y_valid = y_data[train_idx], y_data[test_idx]
-    #         data['X_train'] = pd.DataFrame(X_train)
-    #         data['X_valid'] = pd.DataFrame(X_valid)
-    #         data['y_train'] = pd.DataFrame(y_train).squeeze()
-    #         data['y_valid'] = pd.DataFrame(y_valid).squeeze()
-    #         data = image_data_loader(args, data)
-    #         data_list.append(data)
-        pass
-
-    elif args.MODEL in ('DeepCoNN'): # DeepCoNN 모델에 대한 데이터 전처리가 되어있지 않습니다.
-    #     X_data = np.array(data['text_train'][['user_id', 'isbn', 'user_summary_merge_vector', 'item_summary_vector']])
-    #     y_data = np.array(data['text_train']['rating'])
-    #     for train_idx, test_idx in kf.split(X_data):
-    #         X_train, X_valid = X_data[train_idx], X_data[test_idx]
-    #         y_train, y_valid = y_data[train_idx], y_data[test_idx]
-    #         data['X_train'] = pd.DataFrame(X_train)
-    #         data['X_valid'] = pd.DataFrame(X_valid)
-    #         data['y_train'] = pd.DataFrame(y_train).squeeze()
-    #         data['y_valid'] = pd.DataFrame(y_valid).squeeze()
-    #         data = text_data_loader(args, data)
-    #         data_list.append(data)
-        pass
 
     elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
         X_data = np.array(data['train'].drop(['rating'], axis=1))
@@ -136,7 +127,7 @@ def main(args):
         ######################## WANDB
         if args.WANDB:
             wandb.init(project="test-project", entity="ai-tech-4-recsys13")
-            wandb.run.name = f'K-Fold Iteration {idx}: {args.MODEL}_EPOCH:{args.EPOCHS}_EMBDIM{args.FFM_EMBED_DIM}_BATCH_SIZE{args.BATCH_SIZE}'
+            wandb.run.name =  args.MODEL #+ '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
             wandb.config = {
                 "learning_rate": args.LR ,
                 "epochs": args.EPOCHS,
@@ -164,7 +155,6 @@ def main(args):
             predicts  = model.predict(data['test_dataloader'])
         elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
             predicts  = model.predict(data['test'])
-            # print('RMSE(LGBM):', rmse(data['test'], predicts))
         else:
             pass
 
@@ -195,7 +185,7 @@ if __name__ == "__main__":
     arg = parser.add_argument
 
     ############### BASIC OPTION
-    arg('--DATA_PATH', type=str, default='data/', help='Data path를 설정할 수 있습니다.')
+    arg('--DATA_PATH', type=str, default='data/raw_data/', help='Data path를 설정할 수 있습니다.')
     arg('--MODEL', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--DATA_SHUFFLE', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
