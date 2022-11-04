@@ -6,6 +6,7 @@ from src import seed_everything
 
 from src.data import context_data_load, context_data_split, context_data_loader
 from src.data import dl_data_load, dl_data_split, dl_data_loader
+from src.data import ncf_data_load, ncf_data_split, ncf_data_loader
 from src.data import image_data_load, image_data_split, image_data_loader
 from src.data import text_data_load, text_data_split, text_data_loader
 
@@ -44,8 +45,10 @@ def main(args):
     print(f'--------------- {args.MODEL} Load Data ---------------')
     if args.MODEL in ('FM', 'FFM'):
         data = context_data_load(args)
-    elif args.MODEL in ('NCF', 'WDN', 'DCN'):
+    elif args.MODEL in ('WDN', 'DCN'):
         data = dl_data_load(args)
+    elif args.MODEL in ('NCF'):
+        data = ncf_data_load(args)
     elif args.MODEL == 'CNN_FM':
         data = image_data_load(args)
     elif args.MODEL == 'DeepCoNN':
@@ -63,12 +66,16 @@ def main(args):
         data = context_data_split(args, data)
         data = context_data_loader(args, data)
 
-    elif args.MODEL in ('NCF', 'WDN', 'DCN'):
+    elif args.MODEL in ('WDN', 'DCN'):
         data = dl_data_split(args, data)
         if args.FEAT_COMB: # Feature Combine Ensemble
             data['X_train'], data['X_valid'] = feat_comb(args.ENSEMBLE_FILES, data)
         
         data = dl_data_loader(args, data)
+
+    elif args.MODEL in ('NCF'):
+        data = ncf_data_split(args, data)
+        data = ncf_data_loader(args, data)
 
     elif args.MODEL=='CNN_FM':
         data = image_data_split(args, data)
