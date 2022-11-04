@@ -51,3 +51,12 @@ class Ensemble:
             post_idx = self.filenames[idx+1]
             result[self.output_df[pre_idx]<1] = self.output_df.loc[self.output_df[pre_idx]<1,post_idx]
         return result.tolist()
+
+    def mean(self) :
+        result = []
+        for i in range(len(self.output_list[0])) :
+            data = [row[i] for row in self.output_list]
+            data.remove(min(data))
+            data.remove(max(data))
+            result.append(np.mean(data))
+        return result
