@@ -5,7 +5,13 @@ import pandas as pd
 from src import seed_everything
 
 from src.data import context_data_load, context_data_split, context_data_loader
+from src.data import fm_data_load, fm_data_split, fm_data_loader
+from src.data import ffm_data_load, ffm_data_split, ffm_data_loader
 from src.data import dl_data_load, dl_data_split, dl_data_loader
+from src.data import ncf_data_load, ncf_data_split, ncf_data_loader
+from src.data import dcn_data_load, dcn_data_split, dcn_data_loader
+from src.data import wdn_data_load, wdn_data_split, wdn_data_loader
+
 from src.data import image_data_load, image_data_split, image_data_loader
 from src.data import text_data_load, text_data_split, text_data_loader
 
@@ -18,13 +24,21 @@ import wandb
 
 from gb import XGB, LGBM, CATB, rmse
 
+def predicts_map(x: float) -> float:
+    if x < 1:
+        return 1.0
+    elif x > 10:
+        return 10.0
+    else:
+        return x
+        
 def main(args):
     seed_everything(args.SEED)
 
     ######################## SET WANDB
     if args.WANDB:
         wandb.init(project="test-project", entity="ai-tech-4-recsys13")
-        wandb.run.name = 'data_mb_' + args.MODEL + '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
+        wandb.run.name =  args.MODEL #+ '_EPOCH:' + str(args.EPOCHS) + '_EMBDIM:' + str(args.FFM_EMBED_DIM)
         wandb.config = {
             "learning_rate": args.LR ,
             "epochs": args.EPOCHS,
@@ -34,10 +48,16 @@ def main(args):
 
     ######################## DATA LOAD
     print(f'--------------- {args.MODEL} Load Data ---------------')
-    if args.MODEL in ('FM', 'FFM'):
-        data = context_data_load(args)
-    elif args.MODEL in ('NCF', 'WDN', 'DCN'):
-        data = dl_data_load(args)
+    if args.MODEL in ('FM'):
+        data = fm_data_load(args)
+    elif args.MODEL in ('FFM'):
+        data = ffm_data_load(args)
+    elif args.MODEL in ('WDN'):
+        data = wdn_data_load(args)
+    elif args.MODEL in ('DCN'):
+        data = dcn_data_load(args)
+    elif args.MODEL in ('NCF'):
+        data = ncf_data_load(args)
     elif args.MODEL == 'CNN_FM':
         data = image_data_load(args)
     elif args.MODEL == 'DeepCoNN':
@@ -51,21 +71,29 @@ def main(args):
 
     ######################## Train/Valid Split
     print(f'--------------- {args.MODEL} Train/Valid Split ---------------')
-    if args.MODEL in ('FM', 'FFM'):
-        data = context_data_split(args, data)
-        data = context_data_loader(args, data)
+    if args.MODEL in ('FM'):
+        data = fm_data_split(args, data)
+        data = fm_data_loader(args, data)
 
-    elif args.MODEL in ('NCF', 'WDN', 'DCN'):
-        data = dl_data_split(args, data)
-        data = dl_data_loader(args, data)
+    elif args.MODEL in ('FFM'):
+        data = ffm_data_split(args, data)
+        data = ffm_data_loader(args, data)
+    
+    elif args.MODEL in ('WDN'):
+        data = wdn_data_split(args, data)
+        data = wdn_data_loader(args, data)
+    
+    elif args.MODEL in ('DCN'):
+        data = dcn_data_split(args, data)
+        data = dcn_data_loader(args, data)
+
+    elif args.MODEL in ('NCF'):
+        data = ncf_data_split(args, data)
+        data = ncf_data_loader(args, data)
 
     elif args.MODEL=='CNN_FM':
         data = image_data_split(args, data)
         data = image_data_loader(args, data)
-
-    elif args.MODEL=='DeepCoNN':
-        data = text_data_split(args, data)
-        data = text_data_loader(args, data)
 
     elif args.MODEL=='DeepCoNN':
         data = text_data_split(args, data)
@@ -132,13 +160,19 @@ def main(args):
     if args.MODEL in ('LGBM', 'CATB', 'XGB'):
         print(f'--------------- SAVE {args.MODEL} PREDICT ---------------')
         submission['rating'] = predicts
+        submission['rating'] = submission['rating'].apply(predicts_map)
+        now = time.localtime()
+        now_date = time.strftime('%Y%m%d', now)
+        now_hour = time.strftime('%X', now)
+        save_time = now_date + '_' + now_hour.replace(':', '')
+        submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
     else:
         pass
-    now = time.localtime()
-    now_date = time.strftime('%Y%m%d', now)
-    now_hour = time.strftime('%X', now)
-    save_time = now_date + '_' + now_hour.replace(':', '')
-    submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
+    # now = time.localtime()
+    # now_date = time.strftime('%Y%m%d', now)
+    # now_hour = time.strftime('%X', now)
+    # save_time = now_date + '_' + now_hour.replace(':', '')
+    # submission.to_csv('submit/{}_{}.csv'.format(save_time, args.MODEL), index=False)
 
 
 
@@ -149,7 +183,7 @@ if __name__ == "__main__":
     arg = parser.add_argument
 
     ############### BASIC OPTION
-    arg('--DATA_PATH', type=str, default='data/', help='Data path를 설정할 수 있습니다.')
+    arg('--DATA_PATH', type=str, default='data/raw_data/', help='Data path를 설정할 수 있습니다.')
     arg('--MODEL', type=str, choices=['FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'LGBM', 'CATB', 'XGB'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--DATA_SHUFFLE', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
@@ -221,6 +255,14 @@ if __name__ == "__main__":
     arg('--XGB_LAMBDA', type=int, default=1, help='XGB에서 L2 regularization 정규화 값을 조정할 수 있습니다.')
     arg('--XGB_MIN_CHILD', type=int, default=1, help='XGB에서 leaf node에 포함되는 최소 관측치의 수를 조정할 수 있습니다.[0,inf]')
     arg('--XGB_MAX_DEPTH', type=int, default=6, help='XGB에서 트리의 최대 깊이를 조정할 수 있습니다. [0,inf]')
+
+
+    ############### FEATURE COMBINE
+    arg('--FEAT_COMB', type=bool, default=False, help='FEATURE COMBINE 여부를 선택할 수 있습니다.')
+    arg("--ENSEMBLE_FILES", nargs='+',required=False,
+        type=lambda s: [item for item in s.split(',')],
+        help='required: 앙상블할 submit 파일명을 쉼표(,)로 구분하여 모두 입력해 주세요. 이 때, .csv와 같은 확장자는 입력하지 않습니다.')
+
 
     args = parser.parse_args()
     main(args)

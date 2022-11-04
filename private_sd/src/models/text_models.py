@@ -1,9 +1,13 @@
 import os
 import numpy as np
+import pandas as pd
+
 import tqdm
 import torch
 import torch.nn as nn
-from ._models import RMSELoss, FeaturesEmbedding, FactorizationMachine_v
+from ._models import rmse, RMSELoss, FeaturesEmbedding, FactorizationMachine_v
+
+import wandb
 
 
 class CNN_1D(nn.Module):
@@ -82,11 +86,17 @@ class DeepCoNN:
         self.valid_data_loader = data['valid_dataloader']
         self.criterion = RMSELoss()
         self.epochs = args.EPOCHS
-        self.model_name = 'text_model'
+        self.model_name = 'text'+args.MODEL+str(args.DEEPCONN_EMBED_DIM)+str(args.DEEPCONN_LATENT_DIM)+str(args.DEEPCONN_CONV_1D_OUT_DIM)
+        self.wandb_mode = args.WANDB
+        self.wandb_model_name = args.MODEL
+        self.data_path = args.DATA_PATH
+        wandb.run.name = self.model_name
+
 
 
     def train(self):
         minimum_loss = 999999999
+        best_rmse_score = 9999
         loss_list = []
         tk0 = tqdm.tqdm(range(self.epochs), smoothing=0, mininterval=1.0)
         for epoch in tk0:
@@ -108,6 +118,7 @@ class DeepCoNN:
             self.model.eval()
             val_total_loss = 0
             val_n = 0
+            targets, predicts = list(), list()
             for i, data in enumerate(self.valid_data_loader):
                 if len(data)==3:
                     fields, target = [data['user_summary_merge_vector'].to(self.device), data['item_summary_vector'].to(self.device)], data['label'].to(self.device)
@@ -115,13 +126,18 @@ class DeepCoNN:
                     fields, target = [data['user_isbn_vector'].to(self.device), data['user_summary_merge_vector'].to(self.device), data['item_summary_vector'].to(self.device)], data['label'].to(self.device)
                 y = self.model(fields)
                 loss = self.criterion(y, target.float())
+                targets.extend(target.tolist())
+                predicts.extend(y.tolist())
                 self.model.zero_grad()
                 loss.backward()
                 self.optimizer.step()
                 val_total_loss += loss.item()
                 val_n += 1
-            if minimum_loss > (val_total_loss/val_n):
-                minimum_loss = (val_total_loss/val_n)
+            rmse_score = rmse(targets, predicts)
+            is_new_best = rmse_score < best_rmse_score
+            best_rmse_score = min(best_rmse_score, rmse_score)
+
+            if is_new_best:
                 if not os.path.exists('./models'):
                     os.makedirs('./models')
                 torch.save(self.model.state_dict(), './models/{}.pt'.format(self.model_name))
@@ -129,6 +145,9 @@ class DeepCoNN:
             else:
                 loss_list.append([epoch, total_loss/n, val_total_loss/val_n, 'None'])
             tk0.set_postfix(train_loss=total_loss/n, valid_loss=val_total_loss/val_n)
+            if self.wandb_mode:
+                wandb.log({f"{self.wandb_model_name} Loss": val_total_loss/val_n, f"{self.wandb_model_name} RMSE": rmse_score })
+            
 
 
     def predict(self, test_data_loader):
@@ -144,4 +163,8 @@ class DeepCoNN:
                 y = self.model(fields)
                 targets.extend(target.tolist())
                 predicts.extend(y.tolist())
+        submission = pd.read_csv(self.data_path + 'sample_submission.csv')
+        submission['rating'] = predicts
+        submission.to_csv('{}.csv'.format(self.model_name))
+
         return predicts
