@@ -22,7 +22,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import LGBM, CATB, XGB, rmse, feat_comb
+from gb import XGB, LGBM, CATB, rmse
 
 def predicts_map(x: float) -> float:
     if x < 1:
@@ -31,7 +31,7 @@ def predicts_map(x: float) -> float:
         return 10.0
     else:
         return x
-
+        
 def main(args):
     seed_everything(args.SEED)
 
