@@ -17,19 +17,8 @@ def age_map(x: int) -> int:
         return 4
     elif x >= 50 and x < 60:
         return 5
-    # elif x >= 60 and x < 70:
-    #     return 6
     else:
         return 6
-
-# def counts_map(x: int) -> int:
-#     x = int(x)
-#     if x < 10:
-#         return 1
-#     elif x >= 10 and x < 50:
-#         return 2
-#     else:
-#         return 3
 
 def process_FFM_data(users, books, ratings1, ratings2):
     users['location_city'] = users['location'].apply(lambda x: x.split(',')[0])
@@ -60,9 +49,6 @@ def process_FFM_data(users, books, ratings1, ratings2):
     train_df['age'] = train_df['age'].apply(age_map)
     test_df['age'] = test_df['age'].fillna(int(test_df['age'].mean()))
     test_df['age'] = test_df['age'].apply(age_map)
-
-    # train_df['counts'] = train_df['counts'].apply(counts_map)
-    # test_df['counts'] = test_df['counts'].apply(counts_map)
 
     # book 파트 인덱싱
     category2idx = {v:k for k,v in enumerate(context_df['category'].unique())}
