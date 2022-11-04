@@ -1,43 +1,133 @@
 import pandas as pd
 import numpy as np
 
+from src.models._models import rmse, RMSELoss
+
+from src import seed_everything
+
+from src.data import context_data_load, context_data_split, context_data_loader
+from src.data import dl_data_load, dl_data_split, dl_data_loader
+from src.data import image_data_load, image_data_split, image_data_loader
+from src.data import text_data_load, text_data_split, text_data_loader
+
+from src import FactorizationMachineModel, FieldAwareFactorizationMachineModel
+from src import NeuralCollaborativeFiltering, WideAndDeepModel, DeepCrossNetworkModel
+from src import CNN_FM
+from src import DeepCoNN
+
 from src.ensembles.ensembles import Ensemble
 import argparse
 
+import torch
+import os
+
 def main(args):
-    file_list = sum(args.ENSEMBLE_FILES, [])
-    
-    if len(file_list) < 2:
-        raise ValueError("Ensemble할 Model을 적어도 2개 이상 입력해 주세요.")
-    
-    en = Ensemble(filenames = file_list,filepath=args.RESULT_PATH)
+    if args.ENSEMBLE_FILES != None :
+        file_list = sum(args.ENSEMBLE_FILES, [])
+        
+        if len(file_list) < 2:
+            raise ValueError("Ensemble할 Model을 적어도 2개 이상 입력해 주세요.")
+        
+        en = Ensemble(filenames = file_list,filepath=args.RESULT_PATH)
 
-    if args.ENSEMBLE_STRATEGY == 'WEIGHTED':
-        if args.ENSEMBLE_WEIGHT: 
-            strategy_title = 'sw-'+'-'.join(map(str,*args.ENSEMBLE_WEIGHT)) #simple weighted
-            result = en.simple_weighted(*args.ENSEMBLE_WEIGHT)
+        if args.ENSEMBLE_STRATEGY == 'WEIGHTED':
+            if args.ENSEMBLE_WEIGHT: 
+                strategy_title = 'sw-'+'-'.join(map(str,*args.ENSEMBLE_WEIGHT)) #simple weighted
+                result = en.simple_weighted(*args.ENSEMBLE_WEIGHT)
+            else:
+                strategy_title = 'aw' #average weighted
+                result = en.average_weighted()
+
+        elif args.ENSEMBLE_STRATEGY == "MEDIAN":
+            strategy_title = args.ENSEMBLE_STRATEGY.lower()
+            result = en.median()
+
+        elif args.ENSEMBLE_STRATEGY == 'MIXED':
+            strategy_title = args.ENSEMBLE_STRATEGY.lower() #mixed
+            result = en.mixed()
+
+        elif args.ENSEMBLE_STRATEGY == 'MEAN' :
+            strategy_title = args.ENSEMBLE_STRATEGY.lower()
+            result = en.mean()
         else:
-            strategy_title = 'aw' #average weighted
-            result = en.average_weighted()
+            pass
+        en.output_frame['rating'] = result
+        output = en.output_frame.copy()
+        files_title = '-'.join(file_list)
 
-    elif args.ENSEMBLE_STRATEGY == "MEDIAN":
-        strategy_title = args.ENSEMBLE_STRATEGY.lower()
-        result = en.median()
+        output.to_csv(f'{args.RESULT_PATH}{files_title}-{strategy_title}.csv',index=False)
+    elif args.ENSEMBEL_MODEL != 'None' :
+        model_list = sum(args.ENSEMBLE_MODEL, [])
+        if len(model_list) >= 2 :
+            rmse_list = list()
+            predicts = list()
+            for m in model_list :
+                m = m[:-3]
+                model_name, _ = m.split('_')
+                data = torch.load(os.path.join('models', f"{model_name}_model.pt"))
+                arg = data['args']
+                state = data['state']
+                ######################## DATA LOAD
+                if model_name in ('FM', 'FFM'):
+                    data = context_data_load(arg)
+                elif model_name in ('NCF', 'WDN', 'DCN'):
+                    data = dl_data_load(arg)
+                elif model_name == 'CNN_FM':
+                    data = image_data_load(arg)
+                elif model_name == 'DeepCoNN':
+                    import nltk
+                    nltk.download('punkt')
+                    data = text_data_load(arg)
+                else:
+                    pass
+                
+                ######################## Train/Valid Split
+                if model_name in ('FM', 'FFM'):
+                    data = context_data_split(arg, data)
+                    data = context_data_loader(arg, data)
 
-    elif args.ENSEMBLE_STRATEGY == 'MIXED':
-        strategy_title = args.ENSEMBLE_STRATEGY.lower() #mixed
-        result = en.mixed()
+                elif model_name in ('NCF', 'WDN', 'DCN'):
+                    data = dl_data_split(arg, data)
+                    data = dl_data_loader(arg, data)
 
-    elif args.ENSEMBLE_STRATEGY == 'MEAN' :
-        strategy_title = args.ENSEMBLE_STRATEGY.lower()
-        result = en.mean()
-    else:
-        pass
-    en.output_frame['rating'] = result
-    output = en.output_frame.copy()
-    files_title = '-'.join(file_list)
+                elif model_name =='CNN_FM':
+                    data = image_data_split(arg, data)
+                    data = image_data_loader(arg, data)
 
-    output.to_csv(f'{args.RESULT_PATH}{files_title}-{strategy_title}.csv',index=False)
+                elif model_name =='DeepCoNN':
+                    data = text_data_split(arg, data)
+                    data = text_data_loader(arg, data)
+
+                if model_name =='FM':
+                    cur_model = FactorizationMachineModel(arg, data)
+                elif model_name =='FFM':
+                    cur_model = FieldAwareFactorizationMachineModel(arg, data)
+                elif model_name =='NCF':
+                    cur_model = NeuralCollaborativeFiltering(arg, data)
+                elif model_name =='WDN':
+                    cur_model = WideAndDeepModel(arg, data)
+                elif model_name =='DCN':
+                    cur_model = DeepCrossNetworkModel(arg, data)
+                elif model_name =='CNN_FM':
+                    cur_model = CNN_FM(arg, data)
+                elif model_name =='DeepCoNN':
+                    cur_model = DeepCoNN(arg, data)
+                else:
+                    continue
+
+                cur_model.model.load_state_dict(state)
+                cur_model.model.eval()
+                targets, predict = list(), list()
+                with torch.no_grad():
+                    for fields, target in tqdm.tqdm(cur_model.valid_dataloader, smoothing=0, mininterval=1.0):
+                        fields, target = fields.to(cur_model.device), target.to(cur_model.device)
+                        y = cur_model.model(fields)
+                        targets.extend(target.tolist())
+                        predict.extend(y.tolist())
+                rmse_score = rmse(targets, predict)
+                print(f"{model_name} : {rmse_score}")
+                rmse_list.append(rmse_score)
+            print(np.mean(rmse_list))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='parser')
