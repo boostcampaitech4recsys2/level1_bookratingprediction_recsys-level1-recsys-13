@@ -11,6 +11,7 @@
 /private_sd/submit
 /private_sd/models
 /private_sd/data
+/private_mb/submit
 ?
 # wandb
 /wandb
