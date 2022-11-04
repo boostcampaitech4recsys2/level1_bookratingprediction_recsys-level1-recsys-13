@@ -1,7 +1,7 @@
 ### Dataset
 /data/images
 /submit/*
-/GB/submit/*
+/gb/submit/*
 ?
 /catboost_info/*
 ?
