@@ -11,6 +11,7 @@ from ._models import _NeuralCollaborativeFiltering, _WideAndDeepModel, _DeepCros
 from ._models import rmse, RMSELoss
 
 import wandb
+import os
 
 def predicts_map(x: float) -> float:
     if x < 1:
@@ -26,10 +27,11 @@ class NeuralCollaborativeFiltering:
         super().__init__()
 
         self.criterion = RMSELoss()
+        self.args = args
+        self.model_name = args.MODEL
 
         self.train_dataloader = data['train_dataloader']
         self.valid_dataloader = data['valid_dataloader']
-        self.test_dataloader = data['test_dataloader']        
         self.field_dims = data['field_dims']
         self.user_field_idx = np.array((0, ), dtype=np.long)
         self.item_field_idx=np.array((1, ), dtype=np.long)
@@ -75,16 +77,15 @@ class NeuralCollaborativeFiltering:
                     total_loss = 0
 
             rmse_score = self.predict_train()
+            if self.wandb_mode :
+                wandb.log({"NCF RMSE": rmse_score})
+            if rmse_score < best_rmse_score :
+                best_rmse_score = rmse_score
+                torch.save({'state':self.model.state_dict(),'args':self.args},
+                        os.path.join('models', f"{self.model_name}_model.pt"))
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
-            
-            is_new_best = rmse_score < best_rmse_score
-            best_rmse_score = min(best_rmse_score, rmse_score)
-            if is_new_best:
-                self.predict(self.test_dataloader)
 
-            if self.wandb_mode:
-                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
-
+        print('best rmse:', best_rmse_score)
 
     def predict_train(self):
         self.model.eval()
@@ -99,6 +100,7 @@ class NeuralCollaborativeFiltering:
 
 
     def predict(self, dataloader):
+        self.model.load_state_dict(torch.load(os.path.join('models', f"{self.model_name}_model.pt"))['state'])
         self.model.eval()
         predicts = list()
         with torch.no_grad():
@@ -121,9 +123,11 @@ class WideAndDeepModel:
 
         self.criterion = RMSELoss()
 
+        self.args = args
+        self.model_name = args.MODEL
+
         self.train_dataloader = data['train_dataloader']
         self.valid_dataloader = data['valid_dataloader']
-        self.test_dataloader = data['test_dataloader']
         self.field_dims = data['field_dims']
 
         self.embed_dim = args.WDN_EMBED_DIM
@@ -142,7 +146,6 @@ class WideAndDeepModel:
         self.model = _WideAndDeepModel(self.field_dims, self.embed_dim, mlp_dims=self.mlp_dims, dropout=self.dropout).to(self.device)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.learning_rate, amsgrad=True, weight_decay=self.weight_decay)
 
-        self.wandb_model_name = args.MODEL
         self.wandb_mode = args.WANDB
 
 
@@ -150,29 +153,24 @@ class WideAndDeepModel:
       # model: type, optimizer: torch.optim, train_dataloader: DataLoader, criterion: torch.nn, device: str, log_interval: int=100
         best_rmse_score = 9999
         for epoch in range(self.epochs):
-            self.model.train()
-            total_loss = 0
-            tk0 = tqdm.tqdm(self.train_dataloader, smoothing=0, mininterval=1.0)
-            for i, (fields, target) in enumerate(tk0):
-                fields, target = fields.to(self.device), target.to(self.device)
-                y = self.model(fields)
-                loss = self.criterion(y, target.float())
-                self.model.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                total_loss += loss.item()
-                if (i + 1) % self.log_interval == 0:
-                    tk0.set_postfix(loss=total_loss / self.log_interval)
-                    total_loss = 0
+            loss = self.criterion(y, target.float())
+            self.model.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            total_loss += loss.item()
+            if (i + 1) % self.log_interval == 0:
+                tk0.set_postfix(loss=total_loss / self.log_interval)
+                total_loss = 0
 
             rmse_score = self.predict_train()
+            if self.wandb_mode :
+                wandb.log({"WDN RMSE": rmse_score})
+            if rmse_score < best_rmse_score :
+                best_rmse_score = rmse_score
+                torch.save({'state':self.model.state_dict(),'args':self.args}, 
+                        os.path.join('models', f"{self.model_name}_model.pt"))
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
-            is_new_best = rmse_score < best_rmse_score
-            best_rmse_score = min(best_rmse_score, rmse_score)
-            if is_new_best:
-                self.predict(self.test_dataloader)
-            if self.wandb_mode:
-                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
+        print('best rmse:', best_rmse_score)
 
 
     def predict_train(self):
@@ -188,6 +186,7 @@ class WideAndDeepModel:
 
 
     def predict(self, dataloader):
+        self.model.load_state_dict(torch.load(os.path.join('models', f"{self.model_name}_model.pt"))['state'])
         self.model.eval()
         predicts = list()
         with torch.no_grad():
@@ -209,10 +208,11 @@ class DeepCrossNetworkModel:
         super().__init__()
 
         self.criterion = RMSELoss()
+        self.args = args
+        self.model_name = args.MODEL
 
         self.train_dataloader = data['train_dataloader']
         self.valid_dataloader = data['valid_dataloader']
-        self.test_dataloader = data['test_dataloader']
         self.field_dims = data['field_dims']
 
         self.embed_dim = args.DCN_EMBED_DIM
@@ -251,20 +251,19 @@ class DeepCrossNetworkModel:
                 loss.backward()
                 self.optimizer.step()
                 total_loss += loss.item()
-                if (i + 1) % self.log_interval == 0:
-                    tk0.set_postfix(loss=total_loss / self.log_interval)
+                if (i + 1) % self.log_interval == 0 :
+                    tk0.set_postfix(loss=total_loss / self.log_interval) 
                     total_loss = 0
 
             rmse_score = self.predict_train()
+            if self.wandb_mode :
+                wandb.log({"DCN RMSE": rmse_score})
+            if rmse_score < best_rmse_score :
+                best_rmse_score = rmse_score
+                torch.save({'state':self.model.state_dict(),'args':self.args}, 
+                        os.path.join('models', f"{self.model_name}_model.pt"))
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
-
-            is_new_best = rmse_score < best_rmse_score
-            best_rmse_score = min(best_rmse_score, rmse_score)
-            if is_new_best:
-                self.predict(self.test_dataloader)
-
-            if self.wandb_mode:
-                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
+        print('best rmse:', best_rmse_score)
 
 
     def predict_train(self):
@@ -280,6 +279,7 @@ class DeepCrossNetworkModel:
 
 
     def predict(self, dataloader):
+        self.model.load_state_dict(torch.load(os.path.join('models', f"{self.model_name}_model.pt"))['state'])
         self.model.eval()
         predicts = list()
         with torch.no_grad():

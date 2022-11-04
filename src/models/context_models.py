@@ -13,6 +13,7 @@ from ._models import rmse, RMSELoss
 
 import wandb
 import time
+import os
 
 def predicts_map(x: float) -> float:
     if x < 1:
@@ -28,6 +29,9 @@ class FactorizationMachineModel:
         super().__init__()
 
         self.criterion = RMSELoss()
+
+        self.model_name = args.MODEL
+        self.args = args
 
         self.train_dataloader = data['train_dataloader']
         self.valid_dataloader = data['valid_dataloader']
@@ -73,15 +77,14 @@ class FactorizationMachineModel:
                     total_loss = 0
 
             rmse_score = self.predict_train()
+            if self.wandb_mode :
+                wandb.log({"FM RMSE": rmse_score})
+            if rmse_score < best_rmse_score :
+                best_rmse_score = rmse_score
+                torch.save({'state':self.model.state_dict(),'args':self.args}, 
+                        os.path.join('models', f"{self.model_name}_model.pt"))
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
-
-            is_new_best = rmse_score < best_rmse_score
-            best_rmse_score = min(best_rmse_score, rmse_score)
-            if is_new_best:
-                self.predict(self.test_dataloader)
-                
-            if self.wandb_mode:
-                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
+        print('best rmse:', best_rmse_score)
 
 
     def predict_train(self):
@@ -97,6 +100,7 @@ class FactorizationMachineModel:
 
 
     def predict(self, dataloader):
+        self.model.load_state_dict(torch.load(os.path.join('models', f"{self.model_name}_model.pt"))['state'])
         self.model.eval()
         predicts = list()
         with torch.no_grad():
@@ -118,6 +122,9 @@ class FieldAwareFactorizationMachineModel:
         super().__init__()
 
         self.criterion = RMSELoss()
+
+        self.model_name = args.MODEL
+        self.args = args
 
         self.train_dataloader = data['train_dataloader']
         self.valid_dataloader = data['valid_dataloader']
@@ -161,15 +168,14 @@ class FieldAwareFactorizationMachineModel:
                     total_loss = 0
 
             rmse_score = self.predict_train()
-            # wandb.log({"rmse": rmse_score})
+            if self.wandb_mode :
+                wandb.log({"FFM RMSE": rmse_score})
+            if rmse_score < best_rmse_score :
+                best_rmse_score = rmse_score
+                torch.save({'state':self.model.state_dict(),'args':self.args}, 
+                        os.path.join('models', f"{self.model_name}_model.pt"))
             print('epoch:', epoch, 'validation: rmse:', rmse_score)
-            is_new_best = rmse_score < best_rmse_score
-            best_rmse_score = min(best_rmse_score, rmse_score)
-            if is_new_best:
-                self.predict(self.test_dataloader)
-
-            if self.wandb_mode:
-                wandb.log({f"{self.wandb_model_name} RMSE": rmse_score, f"{self.wandb_model_name} Loss": total_loss})
+        print('best rmse:', best_rmse_score)
 
 
     def predict_train(self):
@@ -185,6 +191,7 @@ class FieldAwareFactorizationMachineModel:
 
 
     def predict(self, dataloader):
+        self.model.load_state_dict(torch.load(os.path.join('models', f"{self.model_name}_model.pt"))['state'])
         self.model.eval()
         predicts = list()
         with torch.no_grad():
