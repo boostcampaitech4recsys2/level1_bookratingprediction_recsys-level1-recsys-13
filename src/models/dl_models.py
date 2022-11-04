@@ -12,6 +12,14 @@ from ._models import rmse, RMSELoss
 
 import wandb
 
+def predicts_map(x: float) -> float:
+    if x < 1:
+        return 1.0
+    elif x > 10:
+        return 10.0
+    else:
+        return x
+
 class NeuralCollaborativeFiltering:
 
     def __init__(self, args, data):
@@ -100,7 +108,10 @@ class NeuralCollaborativeFiltering:
                 predicts.extend(y.tolist())
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
-        submission.to_csv('submit/{}_EPOCHS_{}_EMBED_DIM{}_BATHC_SIZE{}.csv'.format(self.wandb_model_name, self.epochs, self.embed_dim, self.batch_size))
+        submission['rating'] = submission['rating'].apply(predicts_map)
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:-1]}_BATHC_SIZE{self.batch_size}.csv', index=False)
+
+        return predicts
 
 
 class WideAndDeepModel:
@@ -186,7 +197,10 @@ class WideAndDeepModel:
                 predicts.extend(y.tolist())
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
-        submission.to_csv('submit/{}_EPOCHS_{}_EMBED_DIM{}_BATHC_SIZE{}.csv'.format(self.wandb_model_name, self.epochs, self.embed_dim, self.batch_size))
+        submission['rating'] = submission['rating'].apply(predicts_map)
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:-1]}_BATHC_SIZE{self.batch_size}.csv', index=False)
+
+        return predicts
 
 
 class DeepCrossNetworkModel:
@@ -275,4 +289,7 @@ class DeepCrossNetworkModel:
                 predicts.extend(y.tolist())
         submission = pd.read_csv(self.data_path + 'sample_submission.csv')
         submission['rating'] = predicts
-        submission.to_csv('submit/{}_EPOCHS_{}_EMBED_DIM{}_BATHC_SIZE{}.csv'.format(self.wandb_model_name, self.epochs, self.embed_dim, self.batch_size))
+        submission['rating'] = submission['rating'].apply(predicts_map)
+        submission.to_csv(f'submit/{self.wandb_model_name}_EMBED_DIM{self.embed_dim}_EPOCHS{self.epochs}_LR{self.learning_rate}_DATA_PATH{self.data_path[5:-1]}_BATHC_SIZE{self.batch_size}.csv', index=False)
+
+        return predicts

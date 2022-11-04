@@ -13,9 +13,9 @@ from transformers import BertModel, BertTokenizer
 
 
 def text_preprocessing(summary):
-    summary = re.sub("[.,\'\"''""!?]", "", summary)
-    summary = re.sub("[^0-9a-zA-Z\\s]", " ", summary)
-    summary = re.sub("\s+", " ", summary)
+    summary = re.sub("[.,\'\"''""!?]", " ", str(summary))
+    summary = re.sub("[^0-9a-zA-Z\\s]", " ", str(summary))
+    summary = re.sub("\s+", " ", str(summary))
     summary = summary.lower()
     return summary
 
@@ -51,7 +51,7 @@ def process_text_data(df, books, user2idx, isbn2idx, device, train=False, user_s
         df_['isbn'] = df_['isbn'].map(isbn2idx)
 
     df_ = pd.merge(df_, books_[['isbn', 'summary']], on='isbn', how='left')
-    df_['summary'].fillna('None', inplace=True)
+    df_['summary'].fillna(books_['book_title'], inplace=True)
     df_['summary'] = df_['summary'].apply(lambda x:text_preprocessing(x))
     df_['summary'].replace({'':'None', ' ':'None'}, inplace=True)
     df_['summary_length'] = df_['summary'].apply(lambda x:len(x))
