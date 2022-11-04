@@ -31,7 +31,7 @@ def age_map(x: int) -> int:
 #     else:
 #         return 3
 
-def process_context_data(users, books, ratings1, ratings2):
+def process_FFM_data(users, books, ratings1, ratings2):
     users['location_city'] = users['location'].apply(lambda x: x.split(',')[0])
     users['location_state'] = users['location'].apply(lambda x: x.split(',')[1])
     users['location_country'] = users['location'].apply(lambda x: x.split(',')[2])
@@ -92,7 +92,7 @@ def process_context_data(users, books, ratings1, ratings2):
     return idx, train_df, test_df
 
 
-def context_data_load(args):
+def FFM_data_load(args):
 
     ######################## DATA LOAD
     users = pd.read_csv(args.DATA_PATH + 'users.csv')
@@ -120,7 +120,7 @@ def context_data_load(args):
     test['isbn'] = test['isbn'].map(isbn2idx)
     books['isbn'] = books['isbn'].map(isbn2idx)
 
-    idx, context_train, context_test = process_context_data(users, books, train, test)
+    idx, context_train, context_test = process_FFM_data(users, books, train, test)
     field_dims = np.array([len(user2idx), len(isbn2idx),
                             6, len(idx['loc_country2idx']), len(idx['loc_city2idx']), len(idx['loc_state2idx']), # 
                             len(idx['category2idx']), len(idx['publisher2idx']), len(idx['language2idx']), len(idx['author2idx'])], dtype=np.uint32) #
@@ -142,7 +142,7 @@ def context_data_load(args):
     return data
 
 
-def context_data_split(args, data):
+def FFM_data_split(args, data):
     X_train, X_valid, y_train, y_valid = train_test_split(
                                                         data['train'].drop(['rating'], axis=1),
                                                         data['train']['rating'],
@@ -153,7 +153,7 @@ def context_data_split(args, data):
     data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
     return data
 
-def context_data_loader(args, data):
+def FFM_data_loader(args, data):
     train_dataset = TensorDataset(torch.LongTensor(data['X_train'].values), torch.LongTensor(data['y_train'].values))
     valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values))
     test_dataset = TensorDataset(torch.LongTensor(data['test'].values))
