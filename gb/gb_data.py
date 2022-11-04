@@ -6,9 +6,9 @@ from scipy import sparse
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-import torch
-import torch.nn as nn
-from torch.utils.data import TensorDataset, DataLoader, Dataset
+# import torch
+# import torch.nn as nn
+# from torch.utils.data import TensorDataset, DataLoader, Dataset
 import re
 
 def age_map(x: int) -> int:
@@ -59,8 +59,7 @@ def location_to_country(users):
     return users
 
 
-def process_exp_data(users, books, ratings1, ratings2):
-
+def process_gb_data(users, books, ratings1, ratings2):
     users['location'] = users['location'].str.replace(r'[^0-9a-zA-Z:,]', '')
     users = users.replace('na', np.nan)
     users = users.replace('', np.nan)
@@ -141,8 +140,7 @@ def process_exp_data(users, books, ratings1, ratings2):
     return idx, train_df, test_df
 
 
-def data_exp_load(args):
-
+def gb_data_load(args):
     ######################## DATA LOAD
     users = pd.read_csv(args.DATA_PATH + 'users.csv')
     books = pd.read_csv(args.DATA_PATH + 'books.csv')
@@ -180,7 +178,7 @@ def data_exp_load(args):
     # interaction matrix(train, sub, test)
     # interaction = exp_interaction(idx2user, idx2isbn, train, sub)
 
-    idx, exp_train, exp_test = process_exp_data(users, books, train, test)
+    idx, exp_train, exp_test = process_gb_data(users, books, train, test)
     field_dims = np.array([len(user2idx), len(isbn2idx),
                             6, # len(idx['loc_city2idx']), 
                             # len(idx['loc_state2idx']), 
@@ -207,7 +205,7 @@ def data_exp_load(args):
     return data
 
 
-# def exp_interaction(idx2user, idx2isbn, train, sub, test):
+# def gb_interaction(idx2user, idx2isbn, train, sub, test):
 #     size_uid = idx2user.keys()
 #     size_iid = idx2isbn.keys()
 
@@ -245,7 +243,7 @@ def data_exp_load(args):
 #     return train, sub, test
 
 
-def exp_data_split(args, data):
+def gb_data_split(args, data):
     X_train, X_valid, y_train, y_valid = train_test_split(
                                                         data['train'].drop(['rating'], axis=1),
                                                         data['train']['rating'],
@@ -256,16 +254,3 @@ def exp_data_split(args, data):
     data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
     return data
 
-
-def exp_data_loader(args, data):
-    train_dataset = TensorDataset(torch.LongTensor(data['X_train'].values), torch.LongTensor(data['y_train'].values))
-    valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values))
-    test_dataset = TensorDataset(torch.LongTensor(data['test'].values))
-
-    train_dataloader = DataLoader(train_dataset, batch_size=args.BATCH_SIZE, shuffle=args.DATA_SHUFFLE)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=args.BATCH_SIZE, shuffle=args.DATA_SHUFFLE)
-    test_dataloader = DataLoader(test_dataset, batch_size=args.BATCH_SIZE, shuffle=False)
-
-    data['train_dataloader'], data['valid_dataloader'], data['test_dataloader'] = train_dataloader, valid_dataloader, test_dataloader
-
-    return data
