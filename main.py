@@ -5,8 +5,13 @@ import pandas as pd
 from src import seed_everything
 
 from src.data import context_data_load, context_data_split, context_data_loader
+from src.data import fm_data_load, fm_data_split, fm_data_loader
+from src.data import ffm_data_load, ffm_data_split, ffm_data_loader
 from src.data import dl_data_load, dl_data_split, dl_data_loader
 from src.data import ncf_data_load, ncf_data_split, ncf_data_loader
+from src.data import dcn_data_load, dcn_data_split, dcn_data_loader
+from src.data import wdn_data_load, wdn_data_split, wdn_data_loader
+
 from src.data import image_data_load, image_data_split, image_data_loader
 from src.data import text_data_load, text_data_split, text_data_loader
 
@@ -43,10 +48,14 @@ def main(args):
 
     ######################## DATA LOAD
     print(f'--------------- {args.MODEL} Load Data ---------------')
-    if args.MODEL in ('FM', 'FFM'):
-        data = context_data_load(args)
-    elif args.MODEL in ('WDN', 'DCN'):
-        data = dl_data_load(args)
+    if args.MODEL in ('FM'):
+        data = fm_data_load(args)
+    elif args.MODEL in ('FFM'):
+        data = ffm_data_load(args)
+    elif args.MODEL in ('WDN'):
+        data = wdn_data_load(args)
+    elif args.MODEL in ('DCN'):
+        data = dcn_data_load(args)
     elif args.MODEL in ('NCF'):
         data = ncf_data_load(args)
     elif args.MODEL == 'CNN_FM':
@@ -62,16 +71,21 @@ def main(args):
 
     ######################## Train/Valid Split
     print(f'--------------- {args.MODEL} Train/Valid Split ---------------')
-    if args.MODEL in ('FM', 'FFM'):
-        data = context_data_split(args, data)
-        data = context_data_loader(args, data)
+    if args.MODEL in ('FM'):
+        data = fm_data_split(args, data)
+        data = fm_data_loader(args, data)
 
-    elif args.MODEL in ('WDN', 'DCN'):
-        data = dl_data_split(args, data)
-        if args.FEAT_COMB: # Feature Combine Ensemble
-            data['X_train'], data['X_valid'] = feat_comb(args.ENSEMBLE_FILES, data)
-        
-        data = dl_data_loader(args, data)
+    elif args.MODEL in ('FFM'):
+        data = ffm_data_split(args, data)
+        data = ffm_data_loader(args, data)
+    
+    elif args.MODEL in ('WDN'):
+        data = wdn_data_split(args, data)
+        data = wdn_data_loader(args, data)
+    
+    elif args.MODEL in ('DCN'):
+        data = dcn_data_split(args, data)
+        data = dcn_data_loader(args, data)
 
     elif args.MODEL in ('NCF'):
         data = ncf_data_split(args, data)
