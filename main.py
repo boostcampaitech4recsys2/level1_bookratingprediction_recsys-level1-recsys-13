@@ -22,7 +22,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
+from private_mb import LGBM, CATB, XGB, rmse, feat_comb
 
 def predicts_map(x: float) -> float:
     if x < 1:
@@ -255,6 +255,14 @@ if __name__ == "__main__":
     arg('--XGB_LAMBDA', type=int, default=1, help='XGB에서 L2 regularization 정규화 값을 조정할 수 있습니다.')
     arg('--XGB_MIN_CHILD', type=int, default=1, help='XGB에서 leaf node에 포함되는 최소 관측치의 수를 조정할 수 있습니다.[0,inf]')
     arg('--XGB_MAX_DEPTH', type=int, default=6, help='XGB에서 트리의 최대 깊이를 조정할 수 있습니다. [0,inf]')
+
+
+    ############### FEATURE COMBINE
+    arg('--FEAT_COMB', type=bool, default=False, help='FEATURE COMBINE 여부를 선택할 수 있습니다.')
+    arg("--ENSEMBLE_FILES", nargs='+',required=False,
+        type=lambda s: [item for item in s.split(',')],
+        help='required: 앙상블할 submit 파일명을 쉼표(,)로 구분하여 모두 입력해 주세요. 이 때, .csv와 같은 확장자는 입력하지 않습니다.')
+
 
     args = parser.parse_args()
     main(args)

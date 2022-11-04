@@ -113,3 +113,25 @@ def rmse(real, predict):
     pred = list(map(modify_range, predict))  
     pred = np.array(pred)
     return np.sqrt(np.mean((real-pred) ** 2))
+
+
+def feat_comb(filenames, data):
+    X_train, X_valid = data['X_train'], data['X_valid']
+    isbn2idx = data['isbn2idx']
+    user2idx = data['user2idx']
+
+    file_list = sum(filenames, [])
+    filepath = 'submit/'
+    output_path = [filepath+f+'.csv' for f in file_list]
+
+    for idx, path in enumerate(output_path):
+        output = pd.read_csv(path)
+        output['isbn'] = output['isbn'].map(isbn2idx)
+        output['user_id'] = output['user_id'].map(user2idx)
+        #output['rating'] = output['rating'].map(round) # round output ratings - maybe only when classifier?
+        output.rename(columns={'rating':f'output_{idx}'}, inplace=True)
+
+        X_train.merge(output, on=['user_id', 'isbn'], how='left')
+        X_valid.merge(output, on=['user_id', 'isbn'], how='left')
+
+    return X_train, X_valid
