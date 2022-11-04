@@ -1,6 +1,8 @@
 ### Dataset
 /data/images
 /submit/*
+/gb/submit/*
+?
 /catboost_info/*
 ?
 # private workspace
@@ -11,6 +13,7 @@
 /private_sd/submit
 /private_sd/models
 /private_sd/data
+/private_mb/submit
 ?
 # wandb
 /wandb

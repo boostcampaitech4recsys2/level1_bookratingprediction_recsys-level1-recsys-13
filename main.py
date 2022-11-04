@@ -22,7 +22,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import LGBM, CATB, XGB, rmse, feat_comb
+from gb import XGB, LGBM, CATB, rmse, gb_data_load, gb_data_split
 
 def predicts_map(x: float) -> float:
     if x < 1:
@@ -31,7 +31,7 @@ def predicts_map(x: float) -> float:
         return 10.0
     else:
         return x
-
+        
 def main(args):
     seed_everything(args.SEED)
 
@@ -65,7 +65,7 @@ def main(args):
         nltk.download('punkt')
         data = text_data_load(args)
     elif args.MODEL in ('LGBM','CATB','XGB'):
-        data = context_data_load(args)
+        data = gb_data_load(args)
     else:
         pass
 
@@ -104,7 +104,7 @@ def main(args):
         data = text_data_loader(args, data)
 
     elif args.MODEL in ('LGBM', 'CATB', 'XGB'):
-        data = context_data_split(args, data)
+        data = gb_data_split(args, data)
     
     else:
         pass

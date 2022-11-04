@@ -22,7 +22,7 @@ from src import DeepCoNN
 
 import wandb
 
-from private_mb import data_exp_load, exp_data_split, exp_data_loader, dl_data_load_exp, LGBM, CATB, XGB, rmse
+from gb import XGB, LGBM, CATB, rmse, gb_data_load, gb_data_split
 
 from sklearn.model_selection import KFold
 
@@ -45,7 +45,7 @@ def main(args):
         print('We do not support CNN_FM & DeepCoNN models at this kfold file.\n')
         return
     elif args.MODEL in ('LGBM','CATB','XGB'):
-        data = context_data_load(args)
+        data = gb_data_load(args)
     else:
         pass
 
