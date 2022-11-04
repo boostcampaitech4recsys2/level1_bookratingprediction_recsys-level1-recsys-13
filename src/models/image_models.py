@@ -3,8 +3,9 @@ import tqdm
 import numpy as np
 import torch
 import torch.nn as nn
-from ._models import RMSELoss, FeaturesEmbedding, FactorizationMachine_v
+from ._models import RMSELoss, FeaturesEmbedding, FactorizationMachine_v, rmse
 
+import wandb
 
 class CNN_Base(nn.Module):
     def __init__(self, ):
@@ -62,6 +63,8 @@ class CNN_FM:
         self.epochs = args.EPOCHS
         self.model_name = 'image_model'
 
+        self.wandb = args.WANDB
+
 
     def train(self):
         minimum_loss = 999999999
@@ -86,6 +89,8 @@ class CNN_FM:
             self.model.eval()
             val_total_loss = 0
             val_n = 0
+            targets = list()
+            predicts = list()
             for i, data in enumerate(self.valid_data_loader):
                 if len(data) == 2:
                     fields, target = [data['user_isbn_vector'].to(self.device)], data['label'].to(self.device)
@@ -93,6 +98,8 @@ class CNN_FM:
                     fields, target = [data['user_isbn_vector'].to(self.device), data['img_vector'].to(self.device)], data['label'].to(self.device)
                 y = self.model(fields)
                 loss = self.criterion(y, target.float())
+                targets.extend(target.tolist())
+                predicts.extend(y.tolist())
                 self.model.zero_grad()
                 loss.backward()
                 self.optimizer.step()
@@ -107,6 +114,11 @@ class CNN_FM:
             else:
                 loss_list.append([epoch, total_loss/n, val_total_loss/val_n, 'None'])
             tk0.set_postfix(train_loss=total_loss/n, valid_loss=val_total_loss/val_n)
+            rmse_score = rmse(targets, np.array(predicts))
+            if self.wandb :
+                wandb.log({"DeepCon RMSE": rmse_score})
+            print(rmse_score)
+        print(loss_list)
 
 
     def predict(self, test_data_loader):
