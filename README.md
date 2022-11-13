@@ -51,7 +51,7 @@ python main.py --MODEL=FM --FM_EMBED_DIM=4 --WEIGHT_DECAY=0.0001 --DATA_PATH='da
 
 ## :star:To see more
 
-TBD
+저희 Project에 대한 더 자세한 정보를 알고싶으시다면, [Project Wiki](https://github.com/boostcampaitech4recsys2/level1_bookratingprediction_recsys-level1-recsys-13/wiki) 를 확인하세요!
 
 ## :earth_asia:Result
 
